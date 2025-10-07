@@ -174,32 +174,45 @@ io.on('connection', (socket) => {
 
       // New player joining
       const isHost = game.players.length === 0;
+      console.log(`🎮 Server - Adding player "${sanitizedName}" to game ${gameId}. Current players: ${game.players.length}, isHost: ${isHost}`);
+      
       const result = gameManager.addPlayer(gameId, sanitizedName, isHost);
 
       if (!result) {
         if (game.players.some(p => p.name.toLowerCase() === sanitizedName.toLowerCase())) {
+          console.log(`❌ Server - Name "${sanitizedName}" already taken`);
           socket.emit('error', { message: 'Name already taken' });
         } else {
+          console.log(`❌ Server - Game ${gameId} is full`);
           socket.emit('error', { message: 'Game is full' });
         }
         return;
       }
+
+      console.log(`✅ Server - Player "${sanitizedName}" added successfully. Player ID: ${result.playerId}`);
 
       currentGameId = gameId;
       currentPlayerId = result.playerId;
 
       socket.join(gameId);
 
-      // Broadcast player joined
-      io.to(gameId).emit('game_update', {
+      // Broadcast player joined - send the complete player object
+      const newPlayer = game.players.find(p => p.id === result.playerId);
+      if (!newPlayer) {
+        console.error('❌ Server - Could not find newly added player in game');
+        return;
+      }
+      
+      const updateData = {
         type: 'player_joined',
-        data: {
-          playerId: result.playerId,
-          playerName: sanitizedName,
-          isHost,
-          totalPlayers: game.players.length
-        }
+        data: newPlayer // Send the complete Player object
+      };
+      console.log('Broadcasting player_joined:', updateData);
+      console.log(`📊 Server - Current game state after adding player:`, {
+        totalPlayers: game.players.length,
+        players: game.players.map(p => ({ name: p.name, id: p.id, isConnected: p.isConnected }))
       });
+      io.to(gameId).emit('game_update', updateData);
 
     } catch (error) {
       console.error('Error joining game:', error);

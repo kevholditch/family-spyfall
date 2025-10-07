@@ -8,16 +8,58 @@ export function useGameState() {
   const [playerSecret, setPlayerSecret] = useState<string | null>(null);
 
   const updateGameState = (update: GameUpdate) => {
+    console.log('🔄 useGameState - Received update:', update);
     setGameState(prev => {
-      if (!prev) return prev;
+      if (!prev) {
+        console.log('❌ useGameState - No previous state, ignoring update');
+        return prev;
+      }
+
+      console.log('📊 useGameState - Current state before update:', {
+        totalPlayers: prev.players.length,
+        players: prev.players.map(p => ({ name: p.name, id: p.id, isConnected: p.isConnected }))
+      });
 
       switch (update.type) {
         case 'player_joined':
-          return {
+          console.log('🔍 useGameState - Player joined data structure:', {
+            updateData: update.data,
+            updateDataType: typeof update.data,
+            updateDataKeys: Object.keys(update.data || {}),
+            newPlayerId: update.data.id,
+            newPlayerName: update.data.name,
+            existingPlayerIds: prev.players.map(p => p.id),
+            existingPlayerNames: prev.players.map(p => p.name),
+            existingPlayers: prev.players.map(p => ({ id: p.id, name: p.name, isConnected: p.isConnected }))
+          });
+          
+          // Check if player already exists to prevent duplicates
+          const playerExists = prev.players.some(p => p.id === update.data.id);
+          if (playerExists) {
+            console.log('⚠️ useGameState - Player already exists, skipping duplicate:', update.data.name);
+            return prev;
+          }
+          
+          // Safety check - prevent memory leaks
+          if (prev.players.length > 20) {
+            console.error('🚨 useGameState - Too many players detected, possible memory leak. Resetting state.');
+            return {
+              ...prev,
+              players: prev.players.slice(-10), // Keep only last 10 players
+              lastActivity: Date.now()
+            };
+          }
+          
+          const newState = {
             ...prev,
             players: [...prev.players, update.data],
             lastActivity: Date.now()
           };
+          console.log('✅ useGameState - Player joined, new state:', {
+            totalPlayers: newState.players.length,
+            players: newState.players.map(p => ({ name: p.name, id: p.id, isConnected: p.isConnected }))
+          });
+          return newState;
 
         case 'player_left':
         case 'player_disconnected':

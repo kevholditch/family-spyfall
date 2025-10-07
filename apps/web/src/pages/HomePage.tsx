@@ -21,13 +21,17 @@ export function HomePage() {
   // Handle game updates
   useEffect(() => {
     if (gameUpdate) {
+      console.log('📡 HomePage received game update:', gameUpdate);
       updateGameState(gameUpdate);
     }
   }, [gameUpdate, updateGameState]);
 
   const handleCreateGame = async () => {
+    console.log('🎮 HomePage - Create Game button clicked');
+    console.log('🌐 Server URL:', serverUrl);
     setIsCreatingGame(true);
     try {
+      console.log('📡 HomePage - Making API call to create game...');
       const response = await fetch(`${serverUrl}/api/games`, {
         method: 'POST',
         headers: {
@@ -40,10 +44,12 @@ export function HomePage() {
       }
       
       const data = await response.json();
+      console.log('✅ HomePage - Game created successfully:', data);
       setCreatedGameId(data.gameId);
       
       // Auto-join as host
       const hostName = 'TV Host';
+      console.log('👤 HomePage - Auto-joining as host:', { gameId: data.gameId, playerName: hostName });
       emit('join_game', {
         gameId: data.gameId,
         playerName: hostName,
@@ -60,13 +66,13 @@ export function HomePage() {
 
   // Handle successful join
   useEffect(() => {
-    if (gameUpdate?.type === 'player_joined' && gameUpdate.data.playerId && gameUpdate.data.isHost) {
-      const { playerId, secret } = gameUpdate.data;
+    if (gameUpdate?.type === 'player_joined' && gameUpdate.data.id && gameUpdate.data.isHost) {
+      const { id: playerId, secret } = gameUpdate.data;
       
       // Store credentials for reconnection
-      localStorage.setItem('tv_playerId', playerId);
-      localStorage.setItem('tv_playerSecret', secret);
-      localStorage.setItem('tv_gameId', createdGameId || '');
+      sessionStorage.setItem('tv_playerId', playerId);
+      sessionStorage.setItem('tv_playerSecret', secret);
+      sessionStorage.setItem('tv_gameId', createdGameId || '');
       
       // Fetch the game state from the server using the created game ID
       if (createdGameId) {
@@ -170,6 +176,14 @@ export function HomePage() {
   // Filter out TV Host from player count and display - TV Host is not a real player
   const actualPlayers = gameState.players.filter(p => p.name !== 'TV Host');
   const connectedPlayers = actualPlayers.filter(p => p.isConnected);
+  
+  // Debug logging
+  console.log('TV Screen - Game State:', {
+    totalPlayers: gameState.players.length,
+    actualPlayers: actualPlayers.length,
+    connectedPlayers: connectedPlayers.length,
+    players: gameState.players.map(p => ({ name: p.name, isConnected: p.isConnected }))
+  });
 
   return (
     <div className="min-h-screen bg-gray-900 text-white p-6">

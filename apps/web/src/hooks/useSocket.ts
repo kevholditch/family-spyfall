@@ -40,6 +40,7 @@ export function useSocket(serverUrl: string = 'http://localhost:4000'): UseSocke
     });
 
     newSocket.on('game_update', (update) => {
+      console.log('🔌 useSocket - Received game_update event:', update);
       setGameUpdate(update);
     });
 

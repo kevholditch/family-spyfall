@@ -12,24 +12,63 @@ export function JoinPage() {
   const { gameState, currentPlayer, setGame, updateGameState } = useGameState();
   const [playerName, setPlayerName] = useState('');
   const [isJoining, setIsJoining] = useState(false);
+  const [hasJoined, setHasJoined] = useState(false);
 
   // Handle game updates
   useEffect(() => {
     if (gameUpdate) {
+      console.log('📡 JoinPage received game update:', gameUpdate);
       updateGameState(gameUpdate);
+      
+      // If game starts and we've joined, redirect to main game
+      if (gameUpdate.type === 'round_started' && hasJoined) {
+        window.location.href = '/';
+      }
     }
-  }, [gameUpdate, updateGameState]);
+  }, [gameUpdate, updateGameState, hasJoined]);
+
+  // Handle game state changes (like when game starts)
+  useEffect(() => {
+    if (gameState && gameState.status === 'playing' && hasJoined) {
+      window.location.href = '/';
+    }
+  }, [gameState, hasJoined]);
 
   // Handle successful join
   useEffect(() => {
-    if (gameUpdate?.type === 'player_joined' && gameUpdate.data.playerId && isJoining) {
-      const { playerId, secret } = gameUpdate.data;
-      setIsJoining(false);
+    console.log('🔍 JoinPage - Checking for successful join:', {
+      gameUpdateType: gameUpdate?.type,
+      gameUpdateData: gameUpdate?.data,
+      gameUpdateDataType: typeof gameUpdate?.data,
+      gameUpdateDataKeys: gameUpdate?.data ? Object.keys(gameUpdate.data) : [],
+      hasId: !!gameUpdate?.data?.id,
+      playerId: gameUpdate?.data?.id,
+      playerName: gameUpdate?.data?.name,
+      isJoining,
+      hasJoined
+    });
+    
+    if (gameUpdate?.type === 'player_joined' && gameUpdate.data.id && isJoining) {
+      const { id: playerId, secret, name } = gameUpdate.data;
+      
+      // Only process this join event if it's for the current player
+      if (name === playerName) {
+        console.log('✅ JoinPage - Player successfully joined:', { playerId, playerName: name });
+        setIsJoining(false);
+        setHasJoined(true);
+      } else {
+        console.log('⏭️ JoinPage - Ignoring join event for different player:', { 
+          eventPlayerName: name, 
+          currentPlayerName: playerName 
+        });
+        return;
+      }
       
       // Store credentials for reconnection
-      localStorage.setItem('playerId', playerId);
-      localStorage.setItem('playerSecret', secret);
-      localStorage.setItem('gameId', gameId || '');
+      sessionStorage.setItem('playerId', playerId);
+      sessionStorage.setItem('playerSecret', secret);
+      sessionStorage.setItem('gameId', gameId || '');
+      sessionStorage.setItem('playerName', playerName);
       
       // Set up game state
       if (gameState) {
@@ -43,16 +82,22 @@ export function JoinPage() {
       return;
     }
 
+    console.log('🎮 JoinPage - Join button clicked:', { gameId, playerName: playerName.trim() });
+    console.log('🔄 JoinPage - Setting isJoining to true');
     setIsJoining(true);
     
     // Try to reconnect first if we have stored credentials
-    const storedPlayerId = localStorage.getItem('playerId');
-    const storedSecret = localStorage.getItem('playerSecret');
+    const storedPlayerId = sessionStorage.getItem('playerId');
+    const storedSecret = sessionStorage.getItem('playerSecret');
+    const storedGameId = sessionStorage.getItem('gameId');
+    const storedPlayerName = sessionStorage.getItem('playerName');
     
-    // Only use stored credentials if they exist and are not the string 'undefined'
+    // Only use stored credentials if they exist, are not 'undefined', 
+    // match the current game, AND match the current player name
     if (storedPlayerId && storedSecret && 
         storedPlayerId !== 'undefined' && storedSecret !== 'undefined' &&
-        gameId === localStorage.getItem('gameId')) {
+        gameId === storedGameId && playerName.trim() === storedPlayerName) {
+      console.log('📡 JoinPage - Emitting join_game with credentials:', { gameId, playerName: playerName.trim(), playerId: storedPlayerId });
       emit('join_game', {
         gameId,
         playerName: playerName.trim(),
@@ -61,10 +106,12 @@ export function JoinPage() {
       });
     } else {
       // Clear any invalid stored credentials
-      localStorage.removeItem('playerId');
-      localStorage.removeItem('playerSecret');
-      localStorage.removeItem('gameId');
+      sessionStorage.removeItem('playerId');
+      sessionStorage.removeItem('playerSecret');
+      sessionStorage.removeItem('gameId');
+      sessionStorage.removeItem('playerName');
       
+      console.log('📡 JoinPage - Emitting join_game without credentials:', { gameId, playerName: playerName.trim() });
       emit('join_game', {
         gameId,
         playerName: playerName.trim()
@@ -72,6 +119,8 @@ export function JoinPage() {
     }
   };
 
+  console.log('🔌 JoinPage - Socket connection status:', { isConnected, serverUrl, gameId });
+  
   if (!isConnected) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
@@ -89,7 +138,11 @@ export function JoinPage() {
         <div className="bg-white rounded-lg shadow-md p-6 max-w-md w-full text-center">
           <p className="text-red-600 mb-4">{error}</p>
           <button
-            onClick={() => window.location.href = '/'}
+            onClick={() => {
+              setHasJoined(false);
+              setIsJoining(false);
+              window.location.href = '/';
+            }}
             className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
           >
             Go Home
@@ -119,6 +172,37 @@ export function JoinPage() {
     // Redirect to main game page
     window.location.href = '/';
     return null;
+  }
+
+  if (hasJoined) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
+        <div className="bg-white rounded-lg shadow-md p-8 max-w-md w-full text-center">
+          <div className="mb-6">
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Users className="w-8 h-8 text-green-600" />
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">
+              Welcome to the game, {playerName}!
+            </h1>
+            <p className="text-gray-600 mb-6">
+              Waiting for game to start, please stand by...
+            </p>
+          </div>
+          
+          <div className="space-y-4">
+            <div className="flex items-center justify-center space-x-2 text-sm text-gray-500">
+              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+              <span>Connected to game {gameId}</span>
+            </div>
+            
+            <div className="text-xs text-gray-400">
+              The host will start the game when ready
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
