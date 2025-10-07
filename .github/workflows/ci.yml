@@ -1,0 +1,187 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: [18, 20]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v2
+      with:
+        version: 8
+        
+    - name: Get pnpm store directory
+      shell: bash
+      run: |
+        echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+        
+    - name: Setup pnpm cache
+      uses: actions/cache@v3
+      with:
+        path: ${{ env.STORE_PATH }}
+        key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+        restore-keys: |
+          ${{ runner.os }}-pnpm-store-
+          
+    - name: Install dependencies
+      run: pnpm install --frozen-lockfile
+      
+    - name: Lint code
+      run: pnpm lint
+      
+    - name: Run unit tests
+      run: pnpm -C apps/server test
+      
+    - name: Run integration tests
+      run: pnpm -C apps/server test:int
+      
+    - name: Build applications
+      run: pnpm build
+      
+    - name: Upload coverage reports
+      uses: codecov/codecov-action@v3
+      if: matrix.node-version == 18
+      with:
+        files: ./apps/server/coverage/lcov.info
+        fail_ci_if_error: false
+
+  e2e:
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 18
+        
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v2
+      with:
+        version: 8
+        
+    - name: Install dependencies
+      run: pnpm install --frozen-lockfile
+      
+    - name: Install Playwright browsers
+      run: pnpm -C apps/web exec playwright install --with-deps
+      
+    - name: Build applications
+      run: pnpm build
+      
+    - name: Start applications
+      run: |
+        pnpm -C apps/server start &
+        pnpm -C apps/web preview &
+        sleep 10
+      env:
+        NODE_ENV: production
+        
+    - name: Run E2E tests
+      run: pnpm -C apps/web test:e2e
+      
+    - name: Upload test results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: playwright-report
+        path: apps/web/playwright-report/
+        retention-days: 30
+
+  security:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+        
+    - name: Upload Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+  docker:
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      
+    - name: Build server image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./apps/server/Dockerfile
+        push: false
+        tags: spyfall-server:latest
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        
+    - name: Build web image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./apps/web/Dockerfile
+        push: false
+        tags: spyfall-web:latest
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        
+    - name: Test Docker Compose
+      run: |
+        docker-compose up --build -d
+        sleep 30
+        curl -f http://localhost:4000/health || exit 1
+        curl -f http://localhost:5173/health || exit 1
+        docker-compose down
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [test, e2e, security]
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Deploy to production
+      run: |
+        echo "Deployment would happen here"
+        echo "This could be:"
+        echo "- Docker Compose deployment"
+        echo "- Kubernetes deployment"
+        echo "- Cloud platform deployment"
+        echo "- Or any other deployment method"

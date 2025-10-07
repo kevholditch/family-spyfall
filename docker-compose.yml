@@ -1,0 +1,73 @@
+version: '3.8'
+
+services:
+  server:
+    build:
+      context: .
+      dockerfile: apps/server/Dockerfile
+    container_name: spyfall-server
+    ports:
+      - "4000:4000"
+    environment:
+      - NODE_ENV=production
+      - SERVER_PORT=4000
+      - WEB_ORIGIN=http://localhost:5173
+      - ROOM_TTL_MS=7200000
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:4000/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - spyfall-network
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    container_name: spyfall-web
+    ports:
+      - "5173:80"
+    depends_on:
+      server:
+        condition: service_healthy
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - spyfall-network
+
+  # Optional: Add a reverse proxy for production
+  nginx:
+    image: nginx:alpine
+    container_name: spyfall-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.prod.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - server
+      - web
+    restart: unless-stopped
+    networks:
+      - spyfall-network
+    profiles:
+      - production
+
+networks:
+  spyfall-network:
+    driver: bridge
+
+volumes:
+  spyfall-data:
+    driver: local
