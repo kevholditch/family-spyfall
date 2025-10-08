@@ -20,6 +20,7 @@ export function useSocket(serverUrl: string = 'http://localhost:4000'): UseSocke
   const socketRef = useRef<Socket<SocketEvents> | null>(null);
 
   useEffect(() => {
+    console.log('🔌 useSocket - Creating new socket connection to:', serverUrl);
     const newSocket = io(serverUrl, {
       transports: ['websocket', 'polling']
     });
@@ -60,8 +61,12 @@ export function useSocket(serverUrl: string = 'http://localhost:4000'): UseSocke
     event: K,
     ...args: Parameters<SocketEvents[K]>
   ) => {
+    console.log('🔌 useSocket - emit called:', { event, args, hasSocket: !!socketRef.current });
     if (socketRef.current) {
       socketRef.current.emit(event, ...args);
+      console.log('🔌 useSocket - event emitted successfully');
+    } else {
+      console.error('🔌 useSocket - No socket available to emit event!');
     }
   };
 

@@ -87,7 +87,7 @@ export class GameManager {
 
   startRound(gameId: string): boolean {
     const game = this.games.get(gameId);
-    if (!game || game.players.length < 3) return false;
+    if (!game || game.players.length < 1) return false;
 
     // Reset game state
     game.currentPlayerIndex = 0;

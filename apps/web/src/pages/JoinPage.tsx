@@ -20,9 +20,10 @@ export function JoinPage() {
       console.log('📡 JoinPage received game update:', gameUpdate);
       updateGameState(gameUpdate);
       
-      // If game starts and we've joined, redirect to main game
+      // If game starts and we've joined, redirect to game page
       if (gameUpdate.type === 'round_started' && hasJoined) {
-        window.location.href = '/';
+        console.log('🎮 JoinPage - Game started, redirecting to game page');
+        window.location.href = `/game/${gameId}`;
       }
     }
   }, [gameUpdate, updateGameState, hasJoined]);
@@ -30,9 +31,10 @@ export function JoinPage() {
   // Handle game state changes (like when game starts)
   useEffect(() => {
     if (gameState && gameState.status === 'playing' && hasJoined) {
-      window.location.href = '/';
+      console.log('🎮 JoinPage - Game status changed to playing, redirecting to game page');
+      window.location.href = `/game/${gameId}`;
     }
-  }, [gameState, hasJoined]);
+  }, [gameState, hasJoined, gameId]);
 
   // Handle successful join
   useEffect(() => {

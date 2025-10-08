@@ -25,7 +25,10 @@ export function GameControls({
 }: GameControlsProps) {
   const [showAccuseModal, setShowAccuseModal] = useState(false);
 
-  if (!currentPlayer?.isHost) {
+  // Note: TV Host is not in the players array, so we check if this is being rendered on HomePage
+  // If there's no currentPlayer but we're on the host screen, we should still show controls
+  // For now, we'll allow controls to show if currentPlayer is null (TV Host) or if they are a host
+  if (currentPlayer && !currentPlayer.isHost) {
     return null;
   }
 
@@ -43,7 +46,7 @@ export function GameControls({
           {gameState.status === 'waiting' && (
             <button
               onClick={onStartRound}
-              disabled={gameState.players.length < 3}
+              disabled={gameState.players.length < 1}
               className="w-full flex items-center justify-center px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
             >
               <Play className="w-5 h-5 mr-2" />

@@ -33,6 +33,12 @@ export function useGameState() {
             existingPlayers: prev.players.map(p => ({ id: p.id, name: p.name, isConnected: p.isConnected }))
           });
           
+          // Skip TV Host - it's not a real player
+          if (update.data.name === 'TV Host') {
+            console.log('⚠️ useGameState - Skipping TV Host, not a real player');
+            return prev;
+          }
+          
           // Check if player already exists to prevent duplicates
           const playerExists = prev.players.some(p => p.id === update.data.id);
           if (playerExists) {
@@ -63,9 +69,14 @@ export function useGameState() {
 
         case 'player_left':
         case 'player_disconnected':
+          // Don't remove players, just mark as disconnected
           return {
             ...prev,
-            players: prev.players.filter(p => p.id !== update.data.playerId),
+            players: prev.players.map(p => 
+              p.id === update.data.playerId 
+                ? { ...p, isConnected: false }
+                : p
+            ),
             lastActivity: Date.now()
           };
 

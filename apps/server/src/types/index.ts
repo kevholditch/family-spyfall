@@ -42,7 +42,7 @@ export interface GameUpdate {
 
 export interface SocketEvents {
   // Client to Server
-  join_game: (data: { gameId: string; playerName: string; playerId?: string; secret?: string }) => void;
+  join_game: (data: { gameId: string; playerName: string; playerId?: string; secret?: string; isHost?: boolean }) => void;
   start_round: () => void;
   advance_turn: () => void;
   accuse_player: (data: { accusedPlayerId: string }) => void;

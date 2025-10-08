@@ -1,12 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useSocket } from '../hooks/useSocket';
 import { useGameState } from '../hooks/useGameState';
 import { QRCodeDisplay } from '../components/QRCodeDisplay';
-import { PlayerList } from '../components/PlayerList';
 import { GameControls } from '../components/GameControls';
-import { TurnBanner } from '../components/TurnBanner';
 import { VotingModal } from '../components/VotingModal';
-import { RoleDisplay, LocationList } from '../components/RoleDisplay';
 import { Plus, Users, Settings, Gamepad2, Eye, EyeOff, Clock } from 'lucide-react';
 
 export function HomePage() {
@@ -22,6 +19,16 @@ export function HomePage() {
   useEffect(() => {
     if (gameUpdate) {
       console.log('📡 HomePage received game update:', gameUpdate);
+      
+      // Skip TV Host player_joined events - TV Host is not a real player
+      if (gameUpdate.type === 'player_joined' && gameUpdate.data?.name === 'TV Host') {
+        console.log('⚠️ HomePage - Skipping TV Host player_joined event');
+        return;
+      }
+      
+      if (gameUpdate.type === 'round_started') {
+        console.log('🎮 HomePage - Game started!', gameUpdate.data);
+      }
       updateGameState(gameUpdate);
     }
   }, [gameUpdate, updateGameState]);
@@ -54,7 +61,7 @@ export function HomePage() {
         gameId: data.gameId,
         playerName: hostName,
         isHost: true
-      });
+      } as any);
       
     } catch (error) {
       console.error('Error creating game:', error);
@@ -64,9 +71,14 @@ export function HomePage() {
     }
   };
 
-  // Handle successful join
+  // Handle successful join - only for TV Host
   useEffect(() => {
-    if (gameUpdate?.type === 'player_joined' && gameUpdate.data.id && gameUpdate.data.isHost) {
+    if (gameUpdate?.type === 'player_joined' && 
+        gameUpdate.data.id && 
+        gameUpdate.data.isHost && 
+        gameUpdate.data.name === 'TV Host' && 
+        !gameState) {  // Only run if we don't have a game state yet
+      
       const { id: playerId, secret } = gameUpdate.data;
       
       // Store credentials for reconnection
@@ -91,7 +103,7 @@ export function HomePage() {
         fetchGameState();
       }
     }
-  }, [gameUpdate, createdGameId, setGame]);
+  }, [gameUpdate, createdGameId, setGame, gameState]);
 
   if (!isConnected) {
     return (
@@ -173,17 +185,9 @@ export function HomePage() {
 
   // Game exists - show TV control center
   const currentPlayerInfo = gameState.players[gameState.currentPlayerIndex];
-  // Filter out TV Host from player count and display - TV Host is not a real player
-  const actualPlayers = gameState.players.filter(p => p.name !== 'TV Host');
+  // TV Host is no longer in the players array
+  const actualPlayers = gameState.players;
   const connectedPlayers = actualPlayers.filter(p => p.isConnected);
-  
-  // Debug logging
-  console.log('TV Screen - Game State:', {
-    totalPlayers: gameState.players.length,
-    actualPlayers: actualPlayers.length,
-    connectedPlayers: connectedPlayers.length,
-    players: gameState.players.map(p => ({ name: p.name, isConnected: p.isConnected }))
-  });
 
   return (
     <div className="min-h-screen bg-gray-900 text-white p-6">
@@ -261,7 +265,7 @@ export function HomePage() {
                 <h2 className="text-4xl font-bold">WAITING FOR PLAYERS</h2>
               </div>
               <div className="text-2xl text-green-200">
-                Need at least 3 players to start
+                Need at least 1 player to start (debug mode)
               </div>
             </div>
           </div>
@@ -285,10 +289,10 @@ export function HomePage() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {actualPlayers.filter((player, index, arr) => 
+                  {actualPlayers.filter((player, _index, arr) => 
                     // Remove duplicates by keeping only the first occurrence of each player ID
-                    arr.findIndex(p => p.id === player.id) === index
-                  ).map((player, index) => {
+                    arr.findIndex(p => p.id === player.id) === _index
+                  ).map((player) => {
                     // Find the original index in the full players array for turn checking
                     const originalIndex = gameState.players.findIndex(p => p.id === player.id);
                     const isCurrentTurn = originalIndex === gameState.currentPlayerIndex;
@@ -365,7 +369,10 @@ export function HomePage() {
             <GameControls
               gameState={gameState}
               currentPlayer={currentPlayer}
-              onStartRound={() => emit('start_round')}
+              onStartRound={() => {
+                console.log('🎮 HomePage - onStartRound called, emitting start_round event');
+                emit('start_round');
+              }}
               onAdvanceTurn={() => emit('advance_turn')}
               onAccusePlayer={(playerId) => emit('accuse_player', { accusedPlayerId: playerId })}
               onCancelAccusation={() => emit('cancel_accusation')}

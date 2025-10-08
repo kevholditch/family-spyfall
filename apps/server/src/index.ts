@@ -4,6 +4,7 @@ import { Server } from 'socket.io';
 import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
+import { v4 as uuidv4 } from 'uuid';
 import { GameManager } from './game/GameManager';
 import { SocketEvents } from './types';
 import { joinRateLimiter, accusationRateLimiter } from './utils/rateLimiter';
@@ -95,10 +96,10 @@ io.on('connection', (socket) => {
   let currentPlayerId: string | null = null;
 
   // Join game
-  socket.on('join_game', (data: { gameId: string; playerName: string; playerId?: string; secret?: string }) => {
+  socket.on('join_game', (data: { gameId: string; playerName: string; playerId?: string; secret?: string; isHost?: boolean }) => {
     try {
-      const { gameId, playerName, playerId, secret } = data;
-      console.log(`Player attempting to join game ${gameId}:`, { playerName, playerId, secret });
+      const { gameId, playerName, playerId, secret, isHost } = data;
+      console.log(`Player attempting to join game ${gameId}:`, { playerName, playerId, secret, isHost });
       console.log('Socket connected:', socket.connected);
       console.log('Socket ID:', socket.id);
 
@@ -117,12 +118,7 @@ io.on('connection', (socket) => {
         return;
       }
 
-      // Rate limiting
-      const clientIP = socket.handshake.address;
-      if (!joinRateLimiter.isAllowed(clientIP)) {
-        socket.emit('error', { message: 'Too many join attempts. Please wait before trying again.' });
-        return;
-      }
+      // Rate limiting removed - not needed for this use case
 
       const sanitizedName = sanitizePlayerName(playerName);
       const game = gameManager.getGame(gameId);
@@ -152,7 +148,9 @@ io.on('connection', (socket) => {
           currentGameId = gameId;
           currentPlayerId = playerId;
           
+          // Join both the game room and player-specific room
           socket.join(gameId);
+          socket.join(playerId);
           
           // Send role assignment if game is active
           if (game.status === 'playing' || game.status === 'voting') {
@@ -172,11 +170,40 @@ io.on('connection', (socket) => {
         }
       }
 
+      // If this is the TV Host (isHost flag and named "TV Host"), just join the room without creating a player
+      if (isHost && sanitizedName === 'TV Host') {
+        console.log(`🎮 Server - TV Host joining game ${gameId} (not added to players)`);
+        const hostId = uuidv4();
+        const hostSecret = uuidv4();
+        
+        currentGameId = gameId;
+        currentPlayerId = hostId;
+        
+        // Join the game room to receive updates
+        socket.join(gameId);
+        socket.join(hostId);
+        console.log(`🔗 Server - TV Host socket ${socket.id} joined rooms: [${gameId}, ${hostId}]`);
+        
+        // Send success response to the host
+        socket.emit('game_update', {
+          type: 'player_joined',
+          data: {
+            id: hostId,
+            name: sanitizedName,
+            secret: hostSecret,
+            isHost: true,
+            isConnected: true
+          }
+        });
+        
+        return;
+      }
+
       // New player joining
-      const isHost = game.players.length === 0;
-      console.log(`🎮 Server - Adding player "${sanitizedName}" to game ${gameId}. Current players: ${game.players.length}, isHost: ${isHost}`);
+      const isFirstPlayer = game.players.length === 0;
+      console.log(`🎮 Server - Adding player "${sanitizedName}" to game ${gameId}. Current players: ${game.players.length}, isHost: ${isFirstPlayer}`);
       
-      const result = gameManager.addPlayer(gameId, sanitizedName, isHost);
+      const result = gameManager.addPlayer(gameId, sanitizedName, isFirstPlayer);
 
       if (!result) {
         if (game.players.some(p => p.name.toLowerCase() === sanitizedName.toLowerCase())) {
@@ -194,9 +221,12 @@ io.on('connection', (socket) => {
       currentGameId = gameId;
       currentPlayerId = result.playerId;
 
+      // Join both the game room and player-specific room
       socket.join(gameId);
+      socket.join(result.playerId);
+      console.log(`🔗 Server - Socket ${socket.id} joined rooms: [${gameId}, ${result.playerId}]`);
 
-      // Broadcast player joined - send the complete player object
+      // Broadcast player joined to others (not to self) - send the complete player object
       const newPlayer = game.players.find(p => p.id === result.playerId);
       if (!newPlayer) {
         console.error('❌ Server - Could not find newly added player in game');
@@ -212,7 +242,11 @@ io.on('connection', (socket) => {
         totalPlayers: game.players.length,
         players: game.players.map(p => ({ name: p.name, id: p.id, isConnected: p.isConnected }))
       });
-      io.to(gameId).emit('game_update', updateData);
+      // Broadcast to others in the room (excluding sender)
+      socket.to(gameId).emit('game_update', updateData);
+      
+      // Send join confirmation to the sender
+      socket.emit('game_update', updateData);
 
     } catch (error) {
       console.error('Error joining game:', error);
@@ -222,19 +256,41 @@ io.on('connection', (socket) => {
 
   // Start round
   socket.on('start_round', () => {
-    if (!currentGameId || !currentPlayerId) return;
-
-    const game = gameManager.getGame(currentGameId);
-    if (!game) return;
-
-    const player = game.players.find(p => p.id === currentPlayerId);
-    if (!player?.isHost) {
-      socket.emit('error', { message: 'Only the host can start a round' });
+    console.log('🎮 start_round called');
+    console.log('  currentGameId:', currentGameId);
+    console.log('  currentPlayerId:', currentPlayerId);
+    
+    if (!currentGameId || !currentPlayerId) {
+      console.log('  ❌ Missing gameId or playerId, returning');
       return;
     }
 
-    if (game.players.length < 3) {
-      socket.emit('error', { message: 'Need at least 3 players to start' });
+    const game = gameManager.getGame(currentGameId);
+    if (!game) {
+      console.log('  ❌ Game not found, returning');
+      return;
+    }
+
+    console.log('  📊 Game players:', game.players.map(p => ({ id: p.id, name: p.name, isHost: p.isHost })));
+    
+    // Note: TV Host is not in the players array, so player will be undefined for TV Host
+    // Only block if we found a player (not TV Host) AND that player is not a host
+    const player = game.players.find(p => p.id === currentPlayerId);
+    console.log('  👤 Player lookup result:', player ? { id: player.id, name: player.name, isHost: player.isHost } : 'undefined (TV Host)');
+    console.log('  🔍 Condition check: player =', !!player, ', player.isHost =', player?.isHost);
+    console.log('  🔍 Will block?', player && !player.isHost);
+    
+    if (player && !player.isHost) {
+      console.log('  ❌ BLOCKING: Player found but is not host');
+      socket.emit('error', { message: 'Only the host can start a round' });
+      return;
+    }
+    
+    console.log('  ✅ Permission check passed, continuing...');
+
+    // TV Host is no longer in the players array, so just count all players
+    if (game.players.length < 1) {
+      socket.emit('error', { message: 'Need at least 1 player to start' });
       return;
     }
 
@@ -244,8 +300,19 @@ io.on('connection', (socket) => {
       return;
     }
 
+    console.log(`🎮 Server - Starting round for game ${currentGameId}`);
+    console.log(`📊 Server - Game state after startRound:`, {
+      totalPlayers: game.players.length,
+      players: game.players.map(p => ({ name: p.name, id: p.id, isConnected: p.isConnected, role: p.role })),
+      status: game.status,
+      roundNumber: game.roundNumber
+    });
+
     // Send role assignments to all players
     game.players.forEach(player => {
+      console.log(`📤 Server - Sending role assignment to player ${player.name} (${player.id})`);
+      const socketsInPlayerRoom = io.sockets.adapter.rooms.get(player.id);
+      console.log(`  📤 Sockets in room ${player.id}:`, socketsInPlayerRoom ? Array.from(socketsInPlayerRoom) : 'NONE - THIS IS THE PROBLEM!');
       io.to(player.id).emit('role_assignment', {
         role: player.role,
         location: player.location
@@ -253,6 +320,11 @@ io.on('connection', (socket) => {
     });
 
     // Broadcast round started
+    console.log(`📡 Server - Broadcasting round_started to game ${currentGameId}`);
+    const socketsInRoom = io.sockets.adapter.rooms.get(currentGameId);
+    console.log(`📡 Server - Sockets in room ${currentGameId}:`, socketsInRoom ? Array.from(socketsInRoom) : 'none');
+    console.log(`📡 Server - Total sockets in room: ${socketsInRoom?.size || 0}`);
+    
     io.to(currentGameId).emit('game_update', {
       type: 'round_started',
       data: {
@@ -260,6 +332,7 @@ io.on('connection', (socket) => {
         currentPlayerIndex: game.currentPlayerIndex
       }
     });
+    console.log(`📡 Server - round_started broadcast complete`);
   });
 
   // Advance turn
@@ -270,7 +343,7 @@ io.on('connection', (socket) => {
     if (!game) return;
 
     const player = game.players.find(p => p.id === currentPlayerId);
-    if (!player?.isHost) {
+    if (player && !player.isHost) {
       socket.emit('error', { message: 'Only the host can advance turns' });
       return;
     }
@@ -296,7 +369,7 @@ io.on('connection', (socket) => {
     if (!game) return;
 
     const player = game.players.find(p => p.id === currentPlayerId);
-    if (!player?.isHost) {
+    if (player && !player.isHost) {
       socket.emit('error', { message: 'Only the host can start accusations' });
       return;
     }
@@ -349,7 +422,7 @@ io.on('connection', (socket) => {
     if (!game) return;
 
     const player = game.players.find(p => p.id === currentPlayerId);
-    if (!player?.isHost) {
+    if (player && !player.isHost) {
       socket.emit('error', { message: 'Only the host can cancel accusations' });
       return;
     }
@@ -374,7 +447,7 @@ io.on('connection', (socket) => {
     if (!game) return;
 
     const player = game.players.find(p => p.id === currentPlayerId);
-    if (!player?.isHost) {
+    if (player && !player.isHost) {
       socket.emit('error', { message: 'Only the host can end rounds' });
       return;
     }
@@ -393,12 +466,14 @@ io.on('connection', (socket) => {
 
   // Handle disconnection
   socket.on('disconnect', () => {
+    console.log(`🔌 Socket disconnected: ${socket.id}, gameId: ${currentGameId}, playerId: ${currentPlayerId}`);
     if (currentGameId && currentPlayerId) {
       const game = gameManager.getGame(currentGameId);
       if (game) {
         const player = game.players.find(p => p.id === currentPlayerId);
         if (player) {
           player.isConnected = false;
+          console.log(`👋 Player ${player.name} disconnected from game ${currentGameId}`);
           
           socket.to(currentGameId).emit('game_update', {
             type: 'player_disconnected',

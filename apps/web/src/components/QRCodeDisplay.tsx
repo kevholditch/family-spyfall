@@ -24,21 +24,34 @@ export function QRCodeDisplay({ gameId, className = '' }: QRCodeDisplayProps) {
 
   const handleCopyUrl = async () => {
     const joinUrl = getJoinUrl(gameId);
+    
+    // Check if clipboard API is available (requires HTTPS or localhost)
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      try {
+        await navigator.clipboard.writeText(joinUrl);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+        return;
+      } catch (err) {
+        console.error('Clipboard API failed:', err);
+        // Fall through to legacy method
+      }
+    }
+    
+    // Fallback for older browsers or non-secure contexts
     try {
-      await navigator.clipboard.writeText(joinUrl);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000); // Reset after 2 seconds
-    } catch (err) {
-      console.error('Failed to copy URL:', err);
-      // Fallback for older browsers
       const textArea = document.createElement('textarea');
       textArea.value = joinUrl;
+      textArea.style.position = 'fixed';  // Prevent scrolling to bottom
+      textArea.style.opacity = '0';
       document.body.appendChild(textArea);
       textArea.select();
       document.execCommand('copy');
       document.body.removeChild(textArea);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy URL:', err);
     }
   };
 
