@@ -22,9 +22,14 @@ export function JoinPage() {
       updateGameState(gameUpdate);
       
       // If game starts and we've joined, redirect to game page
-      if (gameUpdate.type === 'round_started' && hasJoined) {
-        debugLog('🎮 JoinPage - Game started, redirecting to game page');
-        window.location.href = `/game/${gameId}`;
+      if (gameUpdate.type === 'round_started') {
+        debugLog('🎮 JoinPage - round_started received. hasJoined:', hasJoined);
+        if (hasJoined) {
+          debugLog('✅ JoinPage - Redirecting to game page');
+          window.location.href = `/game/${gameId}`;
+        } else {
+          debugLog('❌ JoinPage - NOT redirecting because hasJoined is false!');
+        }
       }
     }
   }, [gameUpdate, updateGameState, hasJoined]);
@@ -51,18 +56,27 @@ export function JoinPage() {
       hasJoined
     });
     
-    if (gameUpdate?.type === 'player_joined' && gameUpdate.data.id && isJoining) {
+    if (gameUpdate?.type === 'player_joined' && gameUpdate.data.id) {
       const { id: playerId, secret, name } = gameUpdate.data;
       
-      // Only process this join event if it's for the current player
-      if (name === playerName) {
+      debugLog('🔍 JoinPage - Processing player_joined event:', {
+        eventName: name,
+        currentPlayerName: playerName,
+        currentPlayerNameTrimmed: playerName.trim(),
+        namesMatch: name === playerName.trim(),
+        isJoining
+      });
+      
+      // Only process this join event if it's for the current player (compare trimmed names)
+      if (name === playerName.trim()) {
         debugLog('✅ JoinPage - Player successfully joined:', { playerId, playerName: name });
+        debugLog('✅ JoinPage - Setting hasJoined to TRUE');
         setIsJoining(false);
         setHasJoined(true);
       } else {
         debugLog('⏭️ JoinPage - Ignoring join event for different player:', { 
           eventPlayerName: name, 
-          currentPlayerName: playerName 
+          currentPlayerName: playerName.trim() 
         });
         return;
       }
@@ -78,7 +92,7 @@ export function JoinPage() {
         setGame(gameState, playerId, secret);
       }
     }
-  }, [gameUpdate, isJoining, gameId, gameState, setGame]);
+  }, [gameUpdate, playerName, gameId, gameState, setGame]);
 
   const handleJoinGame = () => {
     if (!gameId || !playerName.trim()) {
@@ -202,6 +216,15 @@ export function JoinPage() {
             <div className="text-xs text-gray-400">
               The host will start the game when ready
             </div>
+            
+            {process.env.NODE_ENV === 'development' && (
+              <div className="mt-4 p-3 bg-gray-100 rounded text-xs font-mono">
+                <p className="font-bold mb-1">Debug Info:</p>
+                <p>hasJoined: {hasJoined ? '✅ TRUE' : '❌ FALSE'}</p>
+                <p>isJoining: {isJoining ? 'TRUE' : 'FALSE'}</p>
+                <p>playerName: "{playerName}"</p>
+              </div>
+            )}
           </div>
         </div>
       </div>
