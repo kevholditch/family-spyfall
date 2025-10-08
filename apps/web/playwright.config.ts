@@ -55,7 +55,7 @@ export default defineConfig({
   /* Run your local dev server before starting the tests */
   webServer: [
     {
-      command: 'pnpm -C ../server dev',
+      command: 'ROUND_SUMMARY_TIMEOUT=3000 pnpm -C ../server dev',
       url: 'http://localhost:4000/health',
       reuseExistingServer: !process.env.CI,
       timeout: 120000,

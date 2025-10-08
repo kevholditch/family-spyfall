@@ -13,6 +13,8 @@ import { debugLog, debugError, infoLog, errorLog } from './utils/debug';
 
 dotenv.config();
 
+const ROUND_SUMMARY_TIMEOUT = parseInt(process.env.ROUND_SUMMARY_TIMEOUT || '60000', 10);
+
 const app = express();
 const server = createServer(app);
 const io = new Server(server, {
@@ -414,7 +416,7 @@ io.on('connection', (socket) => {
         }
       });
 
-      // Auto-restart round after 60 seconds
+      // Auto-restart round after configured timeout
       const gameIdForTimeout = currentGameId;
       setTimeout(() => {
         if (!gameIdForTimeout) return;
@@ -440,7 +442,7 @@ io.on('connection', (socket) => {
             });
           }
         }
-      }, 60000); // 60 seconds
+      }, ROUND_SUMMARY_TIMEOUT);
     } else if (game.status === 'playing') {
       // Question round restarted
       io.to(currentGameId).emit('game_update', {
@@ -491,7 +493,7 @@ io.on('connection', (socket) => {
         }
       });
 
-      // Auto-restart round after 60 seconds
+      // Auto-restart round after configured timeout
       const gameIdForTimeout = currentGameId;
       setTimeout(() => {
         if (!gameIdForTimeout) return;
@@ -517,7 +519,7 @@ io.on('connection', (socket) => {
             });
           }
         }
-      }, 60000); // 60 seconds
+      }, ROUND_SUMMARY_TIMEOUT);
     } else if (game.status === 'playing') {
       // Question round restarted
       io.to(currentGameId).emit('game_update', {

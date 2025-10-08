@@ -238,12 +238,12 @@ export class GameManager {
     // Track points awarded this round
     const pointsAwarded: Record<string, number> = {};
 
-    // Award points
+    // Award points (spy win takes precedence)
     if (spyWon) {
       spy.score += 3;
       pointsAwarded[spy.id] = 3;
-    }
-    if (civiliansWon) {
+    } else if (civiliansWon) {
+      // Only award civilian points if spy didn't win
       civilians.forEach(c => {
         if (game.accuseMode!.playerVotes[c.id] === spy.id) {
           c.score += 1;

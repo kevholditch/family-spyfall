@@ -92,6 +92,38 @@ export class TestPlayer {
     await this.page.waitForSelector('text=Question Round', { timeout: 10000 });
   }
 
+  async waitForRoundSummary(): Promise<void> {
+    await this.page.waitForSelector('text=Round Results!', { timeout: 10000 });
+  }
+
+  async getScore(): Promise<number> {
+    // Find the "Points This Round" section and locate this player's card
+    const pointsSection = await this.page.locator('h3:has-text("Points This Round:")').locator('..').first();
+    const playerCards = await pointsSection.locator('.p-3.rounded-lg').all();
+    
+    for (const card of playerCards) {
+      const nameElement = await card.locator('.font-semibold').first();
+      const name = await nameElement.textContent();
+      
+      if (name?.trim() === this.name) {
+        const pointsElement = await card.locator('.text-2xl.font-bold.text-yellow-400').first();
+        const pointsText = await pointsElement.textContent();
+        
+        if (pointsText) {
+          const cleanText = pointsText.replace('+', '').trim();
+          const points = parseInt(cleanText, 10);
+          return isNaN(points) ? 0 : points;
+        }
+      }
+    }
+    
+    return 0;
+  }
+
+  async getRoundPoints(): Promise<number> {
+    return this.getScore();
+  }
+
   async close(): Promise<void> {
     await this.page.close();
     await this.context.close();
