@@ -2,32 +2,31 @@ import { useState, useEffect } from 'react';
 import { useSocket } from '../hooks/useSocket';
 import { useGameState } from '../hooks/useGameState';
 import { QRCodeDisplay } from '../components/QRCodeDisplay';
-import { GameControls } from '../components/GameControls';
-import { VotingModal } from '../components/VotingModal';
-import { Plus, Users, Settings, Gamepad2, Eye, EyeOff, Clock } from 'lucide-react';
 import { debugLog, errorLog } from '../utils/debug';
 
 export function HomePage() {
   // Use the same host as the web app but port 4000 for the server
   const serverUrl = `${window.location.protocol}//${window.location.hostname}:4000`;
   const { emit, gameUpdate, error, isConnected } = useSocket(serverUrl);
-  const { gameState, currentPlayer, setGame, updateGameState } = useGameState();
+  const { gameState, setGame, updateGameState } = useGameState();
   const [isCreatingGame, setIsCreatingGame] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
   const [createdGameId, setCreatedGameId] = useState<string | null>(null);
 
   // Handle game updates
   useEffect(() => {
     if (gameUpdate) {
+      console.log('📡 HomePage received game update:', gameUpdate);
       debugLog('📡 HomePage received game update:', gameUpdate);
       
       // Skip TV Host player_joined events - TV Host is not a real player
       if (gameUpdate.type === 'player_joined' && gameUpdate.data?.name === 'TV Host') {
+        console.log('⚠️ HomePage - Skipping TV Host player_joined event');
         debugLog('⚠️ HomePage - Skipping TV Host player_joined event');
         return;
       }
       
       if (gameUpdate.type === 'round_started') {
+        console.log('🎮 HomePage - Game started!', gameUpdate.data);
         debugLog('🎮 HomePage - Game started!', gameUpdate.data);
       }
       updateGameState(gameUpdate);
@@ -138,299 +137,590 @@ export function HomePage() {
   // If no game exists, show create game screen
   if (!gameState) {
     return (
-      <div className="min-h-screen bg-gray-900 text-white p-6">
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-12">
-            <h1 className="text-6xl font-bold mb-4 bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
-              FAMILY SPYFALL
-            </h1>
-            <h2 className="text-3xl font-semibold text-gray-300 mb-8">TV Control Center</h2>
+      <div 
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100vh',
+          backgroundColor: '#1e3a5f', // Dark teal
+          backgroundImage: `
+            radial-gradient(circle at 25% 25%, rgba(255, 255, 255, 0.02) 0%, transparent 50%),
+            radial-gradient(circle at 75% 75%, rgba(255, 255, 255, 0.02) 0%, transparent 50%),
+            url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.03'/%3E%3C/svg%3E")
+          `,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '2rem'
+        }}
+      >
+        {/* Title - Make it much larger and more proportional */}
+        <div className="text-center mb-16">
+          <div 
+            style={{
+              fontFamily: 'Brush Script MT, cursive',
+              color: '#ff7f50', // Coral orange
+              textShadow: '2px 2px 4px rgba(0, 0, 0, 0.3)',
+              fontSize: 'clamp(4rem, 8vw, 8rem)',
+              fontWeight: 'normal',
+              marginBottom: '1rem'
+            }}
+          >
+            Family
           </div>
-
-          <div className="bg-gray-800 rounded-xl p-8 shadow-xl text-center">
-            <div className="mb-8">
-              <Gamepad2 className="w-24 h-24 mx-auto mb-6 text-blue-400" />
-              <h3 className="text-2xl font-bold mb-4">Ready to Start a Game?</h3>
-              <p className="text-gray-400 text-lg mb-8">
-                Create a new game and share the join link with players. 
-                This screen will show all game activity in real-time.
-              </p>
-            </div>
-
-            <button
-              onClick={handleCreateGame}
-              disabled={isCreatingGame}
-              className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-green-600 to-blue-600 text-white text-xl font-bold rounded-xl hover:from-green-700 hover:to-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-all duration-200 shadow-lg"
-            >
-              {isCreatingGame ? (
-                <>
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white mr-3"></div>
-                  Creating Game...
-                </>
-              ) : (
-                <>
-                  <Plus className="w-6 h-6 mr-3" />
-                  Create New Game
-                </>
-              )}
-            </button>
-
-            <div className="mt-8 text-sm text-gray-500">
-              <p>Once created, players can join using the QR code or join link</p>
-            </div>
+          <div 
+            style={{
+              fontFamily: 'Times New Roman, serif',
+              color: '#f5f5dc', // Cream
+              textShadow: '3px 3px 6px rgba(0, 0, 0, 0.4)',
+              letterSpacing: '0.1em',
+              fontSize: 'clamp(6rem, 12vw, 16rem)',
+              fontWeight: 'bold'
+            }}
+          >
+            SPYFALL
           </div>
         </div>
+
+        {/* Create Game Button - Make it larger too */}
+        <button
+          onClick={handleCreateGame}
+          disabled={isCreatingGame}
+          className="px-16 py-8 text-3xl md:text-4xl font-bold transition-all duration-300 transform hover:scale-105 hover:shadow-2xl disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-none"
+          style={{
+            backgroundColor: '#ff8c42', // Golden orange
+            color: '#f5f5dc', // Cream
+            boxShadow: '0 8px 32px rgba(255, 140, 66, 0.3), 0 4px 16px rgba(0, 0, 0, 0.2)',
+            border: 'none',
+            borderRadius: '12px',
+            padding: '32px 64px',
+            cursor: 'pointer'
+          }}
+          onMouseEnter={(e) => {
+            if (!isCreatingGame) {
+              e.currentTarget.style.backgroundColor = '#ff9f66';
+              e.currentTarget.style.boxShadow = '0 12px 40px rgba(255, 140, 66, 0.4), 0 6px 20px rgba(0, 0, 0, 0.3)';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!isCreatingGame) {
+              e.currentTarget.style.backgroundColor = '#ff8c42';
+              e.currentTarget.style.boxShadow = '0 8px 32px rgba(255, 140, 66, 0.3), 0 4px 16px rgba(0, 0, 0, 0.2)';
+            }
+          }}
+        >
+          {isCreatingGame ? (
+            <>
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-white mr-4"></div>
+              Creating Game...
+            </>
+          ) : (
+            'Create New Game'
+          )}
+        </button>
       </div>
     );
   }
 
   // Game exists - show TV control center
-  const currentPlayerInfo = gameState.players[gameState.currentPlayerIndex];
-  // TV Host is no longer in the players array
   const actualPlayers = gameState.players;
   const connectedPlayers = actualPlayers.filter(p => p.isConnected);
+  
+  // Debug logging for player updates
+  console.log('🎮 HomePage - Current game state:', {
+    totalPlayers: actualPlayers.length,
+    connectedPlayers: connectedPlayers.length,
+    allPlayers: actualPlayers.map(p => ({ name: p.name, id: p.id, isConnected: p.isConnected })),
+    connectedPlayersList: connectedPlayers.map(p => ({ name: p.name, id: p.id, isConnected: p.isConnected }))
+  });
 
-  return (
-    <div className="min-h-screen bg-gray-900 text-white p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8 text-center">
-          <h1 className="text-6xl font-bold mb-4 bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
-            FAMILY SPYFALL
-          </h1>
-          <div className="flex items-center justify-center space-x-8 text-2xl">
-            <div className="flex items-center space-x-2">
-              <Gamepad2 className="w-8 h-8 text-blue-400" />
-              <span>Game ID: <strong className="text-yellow-400">{gameState.id}</strong></span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Users className="w-8 h-8 text-green-400" />
-              <span>Players: <strong className="text-green-400">{connectedPlayers.length}</strong></span>
-            </div>
-            {gameState.status === 'playing' && (
-              <div className="flex items-center space-x-2">
-                <span className="text-purple-400">Round {gameState.roundNumber}</span>
-              </div>
-            )}
-            <button
-              onClick={() => setShowSettings(!showSettings)}
-              className="ml-4 p-2 hover:bg-gray-700 rounded-lg transition-colors"
-            >
-              <Settings className="w-6 h-6" />
-            </button>
+  // Get sorted scoreboard
+  const getSortedScoreboard = () => {
+    return [...actualPlayers].sort((a, b) => {
+      // First sort by score (descending)
+      if (b.score !== a.score) {
+        return b.score - a.score;
+      }
+      // If tied, sort alphabetically
+      return a.name.localeCompare(b.name);
+    });
+  };
+
+  // Get current player name
+  const getCurrentPlayerName = () => {
+    if (gameState.status === 'waiting') return '';
+    const currentPlayer = actualPlayers[gameState.currentPlayerIndex];
+    return currentPlayer?.name || '';
+  };
+
+  // Get players left in round
+  const getPlayersLeftInRound = () => {
+    if (gameState.status === 'waiting') return { current: 0, total: 0 };
+    
+    const playersWhoAsked = actualPlayers.filter(p => p.hasAskedQuestion).length;
+    const total = actualPlayers.length;
+    const current = total - playersWhoAsked;
+    
+    return { current, total };
+  };
+
+  const isGameInProgress = gameState.status === 'playing' || 
+                          gameState.status === 'accusing' || 
+                          gameState.status === 'round_summary';
+
+  // If game is in progress, show game state with scoreboard
+  if (isGameInProgress) {
+    const currentPlayerName = getCurrentPlayerName();
+    const { current } = getPlayersLeftInRound();
+    const sortedPlayers = getSortedScoreboard();
+
+    return (
+      <div 
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100vh',
+          backgroundColor: '#1e3a5f', // Dark teal
+          backgroundImage: `
+            radial-gradient(circle at 25% 25%, rgba(255, 255, 255, 0.02) 0%, transparent 50%),
+            radial-gradient(circle at 75% 75%, rgba(255, 255, 255, 0.02) 0%, transparent 50%),
+            url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.03'/%3E%3C/svg%3E")
+          `,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          padding: '2rem',
+          color: '#f5f5dc'
+        }}
+      >
+        {/* Header - Family SPYFALL Logo */}
+        <div className="text-center mb-12">
+          <div 
+            style={{
+              fontFamily: 'Brush Script MT, cursive',
+              color: '#ff7f50', // Coral orange
+              textShadow: '2px 2px 4px rgba(0, 0, 0, 0.3)',
+              fontSize: 'clamp(2.5rem, 5vw, 4rem)',
+              fontWeight: 'normal',
+              marginBottom: '0.5rem'
+            }}
+          >
+            Family
+          </div>
+          <div 
+            style={{
+              fontFamily: 'Times New Roman, serif',
+              color: '#f5f5dc', // Cream
+              textShadow: '3px 3px 6px rgba(0, 0, 0, 0.4)',
+              letterSpacing: '0.1em',
+              fontSize: 'clamp(3.5rem, 7vw, 6rem)',
+              fontWeight: 'bold'
+            }}
+          >
+            SPYFALL
           </div>
         </div>
 
-        {/* Game Status Banner */}
-        {gameState.status === 'playing' && (
-          <div className="mb-8">
-            <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-6 text-center">
-              <div className="flex items-center justify-center space-x-4 mb-4">
-                <Clock className="w-12 h-12" />
-                <h2 className="text-4xl font-bold">CURRENT TURN</h2>
-              </div>
-              {currentPlayerInfo && (
-                <div className="text-3xl">
-                  <span className="text-yellow-300">{currentPlayerInfo.name}</span>
-                  <span className="text-white"> is asking questions</span>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {gameState.status === 'voting' && (
-          <div className="mb-8">
-            <div className="bg-gradient-to-r from-red-600 to-orange-600 rounded-xl p-6 text-center">
-              <div className="flex items-center justify-center space-x-4 mb-4">
-                <Eye className="w-12 h-12" />
-                <h2 className="text-4xl font-bold">VOTING IN PROGRESS</h2>
-              </div>
-              {gameState.accusation && (
-                <div className="text-3xl">
-                  <span className="text-yellow-300">
-                    {gameState.players.find(p => p.id === gameState.accusation?.accusedPlayerId)?.name}
-                  </span>
-                  <span className="text-white"> is being accused of being the spy!</span>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {gameState.status === 'waiting' && (
-          <div className="mb-8">
-            <div className="bg-gradient-to-r from-green-600 to-blue-600 rounded-xl p-6 text-center">
-              <div className="flex items-center justify-center space-x-4 mb-4">
-                <Users className="w-12 h-12" />
-                <h2 className="text-4xl font-bold">WAITING FOR PLAYERS</h2>
-              </div>
-              <div className="text-2xl text-green-200">
-                Need at least 1 player to start (debug mode)
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left Column - Players */}
-          <div className="lg:col-span-2">
-            <div className="bg-gray-800 rounded-xl p-6 shadow-xl">
-              <h3 className="text-3xl font-bold mb-6 flex items-center">
-                <Users className="w-8 h-8 mr-3 text-blue-400" />
-                PLAYERS ({connectedPlayers.length})
-              </h3>
-              
-              {connectedPlayers.length === 0 ? (
-                <div className="text-center py-12">
-                  <Users className="w-16 h-16 mx-auto mb-4 text-gray-500" />
-                  <p className="text-xl text-gray-400 mb-2">No players joined yet</p>
-                  <p className="text-gray-500">Share the QR code or join link below to get started!</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {actualPlayers.filter((player, _index, arr) => 
-                    // Remove duplicates by keeping only the first occurrence of each player ID
-                    arr.findIndex(p => p.id === player.id) === _index
-                  ).map((player) => {
-                    // Find the original index in the full players array for turn checking
-                    const originalIndex = gameState.players.findIndex(p => p.id === player.id);
-                    const isCurrentTurn = originalIndex === gameState.currentPlayerIndex;
-                    const isHost = player.isHost;
-                    
-                    return (
-                      <div
-                        key={player.id}
-                        className={`
-                          p-4 rounded-lg border-2 transition-all
-                          ${isCurrentTurn 
-                            ? 'border-yellow-400 bg-yellow-400/10' 
-                            : 'border-gray-600 bg-gray-700'
-                          }
-                          ${!player.isConnected ? 'opacity-50' : ''}
-                        `}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-3">
-                            <div className={`
-                              w-4 h-4 rounded-full
-                              ${player.isConnected ? 'bg-green-400' : 'bg-red-400'}
-                            `} />
-                            <span className="text-xl font-semibold">{player.name}</span>
-                          </div>
-                          
-                          <div className="flex space-x-2">
-                            {isHost && (
-                              <div className="px-3 py-1 bg-purple-600 text-white text-sm font-bold rounded-full">
-                                HOST
-                              </div>
-                            )}
-                            
-                            {isCurrentTurn && gameState.status === 'playing' && (
-                              <div className="px-3 py-1 bg-yellow-400 text-black text-sm font-bold rounded-full">
-                                CURRENT TURN
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            {/* Game Info */}
-            {gameState.status === 'playing' && (
-              <div className="mt-6 bg-gray-800 rounded-xl p-6 shadow-xl">
-                <h3 className="text-2xl font-bold mb-4 flex items-center">
-                  <EyeOff className="w-6 h-6 mr-3 text-orange-400" />
-                  GAME INFO
-                </h3>
-                <div className="text-lg space-y-2">
-                  <div>• One player is the <span className="text-red-400 font-bold">SPY</span></div>
-                  <div>• All others know the <span className="text-green-400 font-bold">LOCATION</span></div>
-                  <div>• Ask questions to find the spy!</div>
-                  <div>• Don't reveal the location to the spy!</div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Right Column - Join Info & Controls */}
-          <div className="space-y-6">
-            {/* QR Code for Joining */}
-            <div className="bg-gray-800 rounded-xl p-6 shadow-xl">
-              <h3 className="text-xl font-bold mb-4 text-center">JOIN GAME</h3>
-              <QRCodeDisplay gameId={gameState.id} />
-            </div>
-
-            {/* Host Controls */}
-            <GameControls
-              gameState={gameState}
-              currentPlayer={currentPlayer}
-              onStartRound={() => {
-                debugLog('🎮 HomePage - onStartRound called, emitting start_round event');
-                emit('start_round');
+        {/* Main Content Area - Two Column Layout */}
+        <div 
+          style={{
+            flex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '100%',
+            gap: '20px'
+          }}
+        >
+          {/* Left Side - Scoreboard */}
+          <div 
+            data-testid="tv-scoreboard"
+            style={{
+              backgroundColor: 'rgba(255, 255, 255, 0.1)',
+              borderRadius: '20px',
+              padding: '2rem',
+              minWidth: '300px',
+              border: '2px solid rgba(255, 140, 66, 0.3)'
+            }}
+          >
+            <h3 
+              style={{
+                fontSize: 'clamp(1.5rem, 3vw, 2rem)',
+                fontWeight: 'bold',
+                color: '#f5f5dc',
+                textAlign: 'center',
+                marginBottom: '1.5rem'
               }}
-              onAdvanceTurn={() => emit('advance_turn')}
-              onAccusePlayer={(playerId) => emit('accuse_player', { accusedPlayerId: playerId })}
-              onCancelAccusation={() => emit('cancel_accusation')}
-              onEndRound={() => emit('end_round')}
-            />
-
-            {/* Connection Status */}
-            <div className="bg-gray-800 rounded-xl p-6 shadow-xl">
-              <h3 className="text-xl font-bold mb-4 flex items-center">
-                <div className={`w-3 h-3 rounded-full mr-3 ${isConnected ? 'bg-green-400' : 'bg-red-400'}`} />
-                CONNECTION STATUS
-              </h3>
-              <div className="text-sm space-y-2">
-                <div>Server: <span className={isConnected ? 'text-green-400' : 'text-red-400'}>{isConnected ? 'Connected' : 'Disconnected'}</span></div>
-                <div>Game: <span className="text-green-400">Active</span></div>
-                <div>Last Update: <span className="text-blue-400">{new Date().toLocaleTimeString()}</span></div>
-              </div>
+            >
+              Scoreboard
+            </h3>
+            <div className="space-y-3">
+              {sortedPlayers.map((player, index) => (
+                <div
+                  key={player.id}
+                  data-testid="scoreboard-player"
+                  style={{
+                    backgroundColor: index === 0 && player.score > 0 
+                      ? 'rgba(255, 215, 0, 0.3)' // Gold tint for leader
+                      : 'rgba(255, 140, 66, 0.2)',
+                    borderRadius: '10px',
+                    padding: '0.8rem 1.2rem',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    border: index === 0 && player.score > 0 
+                      ? '1px solid rgba(255, 215, 0, 0.5)' 
+                      : '1px solid rgba(255, 140, 66, 0.4)'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <span 
+                      style={{
+                        fontSize: 'clamp(0.9rem, 1.8vw, 1.1rem)',
+                        fontWeight: 'bold',
+                        color: '#ff7f50', // Coral orange
+                        minWidth: '1.5rem'
+                      }}
+                    >
+                      #{index + 1}
+                    </span>
+                    <span 
+                      style={{
+                        fontSize: 'clamp(1rem, 2vw, 1.2rem)',
+                        fontWeight: 'bold',
+                        color: '#f5f5dc'
+                      }}
+                      data-testid="player-name"
+                    >
+                      {player.name}
+                    </span>
+                  </div>
+                  <span 
+                    style={{
+                      fontSize: 'clamp(1.2rem, 2.5vw, 1.5rem)',
+                      fontWeight: 'bold',
+                      color: player.score > 0 ? '#ffd700' : '#f5f5dc' // Gold for positive scores
+                    }}
+                    data-testid="player-score"
+                  >
+                    {player.score}
+                  </span>
+                </div>
+              ))}
             </div>
+          </div>
+
+          {/* Vertical Divider Line */}
+          <div 
+            style={{
+              width: '4px',
+              height: '400px',
+              backgroundColor: '#ff7f50', // Coral orange - same as Family text
+              borderRadius: '2px'
+            }}
+          ></div>
+
+          {/* Right Side - Game Status Information */}
+          <div 
+            style={{
+              backgroundColor: 'rgba(255, 255, 255, 0.1)',
+              borderRadius: '20px',
+              padding: '2rem',
+              minWidth: '300px',
+              border: '2px solid rgba(255, 140, 66, 0.3)',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center',
+              gap: '1.5rem'
+            }}
+          >
+            <div 
+              style={{
+                fontSize: 'clamp(1.5rem, 3vw, 2rem)',
+                fontWeight: 'bold',
+                color: '#f5f5dc',
+                textAlign: 'center',
+                textShadow: '2px 2px 4px rgba(0, 0, 0, 0.3)'
+              }}
+            >
+              Game in progress
+            </div>
+
+            {gameState.status === 'playing' && currentPlayerName && (
+              <>
+                <div 
+                  style={{
+                    fontSize: 'clamp(1.2rem, 2.5vw, 1.8rem)',
+                    fontWeight: 'bold',
+                    color: '#ff7f50', // Coral orange
+                    textAlign: 'center',
+                    textShadow: '1px 1px 3px rgba(0, 0, 0, 0.3)'
+                  }}
+                >
+                  {currentPlayerName} is asking a question
+                </div>
+                <div 
+                  style={{
+                    fontSize: 'clamp(1.2rem, 2.5vw, 1.8rem)',
+                    fontWeight: 'bold',
+                    color: '#f5f5dc',
+                    textAlign: 'center',
+                    opacity: 0.9
+                  }}
+                >
+                  {current} player{current !== 1 ? 's' : ''} left to ask questions
+                </div>
+              </>
+            )}
+
+            {gameState.status === 'accusing' && (
+              <div 
+                style={{
+                  fontSize: 'clamp(1.2rem, 2.5vw, 1.8rem)',
+                  fontWeight: 'bold',
+                  color: '#ff7f50', // Coral orange
+                  textAlign: 'center',
+                  textShadow: '1px 1px 3px rgba(0, 0, 0, 0.3)'
+                }}
+              >
+                Voting in progress
+              </div>
+            )}
+
+            {gameState.status === 'round_summary' && (
+              <div 
+                style={{
+                  fontSize: 'clamp(1.2rem, 2.5vw, 1.8rem)',
+                  fontWeight: 'bold',
+                  color: '#ff7f50', // Coral orange
+                  textAlign: 'center',
+                  textShadow: '1px 1px 3px rgba(0, 0, 0, 0.3)'
+                }}
+              >
+                Round Summary
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Voting Modal */}
-        {gameState.status === 'voting' && (
-          <VotingModal
-            gameState={gameState}
-            currentPlayer={currentPlayer}
-            onVote={(vote) => emit('vote', { vote })}
-          />
-        )}
+        {/* Round indicator (subtle) */}
+        <div className="absolute top-8 right-8 text-sm opacity-60" style={{ color: '#f5f5dc' }}>
+          Round {gameState.roundNumber}
+        </div>
+      </div>
+    );
+  }
 
-        {/* Settings Panel */}
-        {showSettings && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-gray-800 rounded-lg p-6 max-w-md w-full">
-              <h3 className="text-lg font-semibold mb-4">Game Settings</h3>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Server URL
-                  </label>
-                  <input
-                    type="text"
-                    value={`${window.location.protocol}//${window.location.hostname}:4000`}
-                    disabled
-                    className="w-full px-3 py-2 border border-gray-600 rounded-lg bg-gray-700 text-white"
-                  />
-                </div>
-                <button
-                  onClick={() => setShowSettings(false)}
-                  className="w-full px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-500 transition-colors"
-                >
-                  Close
-                </button>
-              </div>
+  // Otherwise show waiting state with QR code and start button
+  return (
+    <div 
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100vw',
+        height: '100vh',
+        backgroundColor: '#1e3a5f', // Dark teal
+        backgroundImage: `
+          radial-gradient(circle at 25% 25%, rgba(255, 255, 255, 0.02) 0%, transparent 50%),
+          radial-gradient(circle at 75% 75%, rgba(255, 255, 255, 0.02) 0%, transparent 50%),
+          url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.03'/%3E%3C/svg%3E")
+        `,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        padding: '2rem',
+        color: '#f5f5dc'
+      }}
+    >
+      {/* Header - Family SPYFALL Logo */}
+      <div className="text-center mb-12">
+        <div 
+          style={{
+            fontFamily: 'Brush Script MT, cursive',
+            color: '#ff7f50', // Coral orange
+            textShadow: '2px 2px 4px rgba(0, 0, 0, 0.3)',
+            fontSize: 'clamp(2.5rem, 5vw, 4rem)',
+            fontWeight: 'normal',
+            marginBottom: '0.5rem'
+          }}
+        >
+          Family
+        </div>
+        <div 
+          style={{
+            fontFamily: 'Times New Roman, serif',
+            color: '#f5f5dc', // Cream
+            textShadow: '3px 3px 6px rgba(0, 0, 0, 0.4)',
+            letterSpacing: '0.1em',
+            fontSize: 'clamp(3.5rem, 7vw, 6rem)',
+            fontWeight: 'bold'
+          }}
+        >
+          SPYFALL
+        </div>
+      </div>
+
+      {/* Main Content Area */}
+      <div 
+        style={{
+          flex: 1,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: '100%',
+          gap: '20px'
+        }}
+      >
+        {/* Left Side - Players Box */}
+        <div 
+          style={{
+            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+            borderRadius: '20px',
+            padding: '2rem',
+            minWidth: '300px',
+            border: '2px solid rgba(255, 140, 66, 0.3)'
+          }}
+        >
+          <h3 
+            style={{
+              fontSize: 'clamp(1.5rem, 3vw, 2rem)',
+              fontWeight: 'bold',
+              color: '#f5f5dc',
+              textAlign: 'center',
+              marginBottom: '1.5rem'
+            }}
+          >
+            Joined Players ({connectedPlayers.length})
+          </h3>
+          
+          {connectedPlayers.length === 0 ? (
+            <div 
+              style={{
+                fontSize: 'clamp(1rem, 2vw, 1.3rem)',
+                color: '#ff7f50',
+                fontStyle: 'italic',
+                textAlign: 'center'
+              }}
+            >
+              No players yet...
             </div>
-          </div>
-        )}
+          ) : (
+            <div className="space-y-3">
+              {connectedPlayers.map((player) => (
+                <div
+                  key={player.id}
+                  style={{
+                    backgroundColor: 'rgba(255, 140, 66, 0.2)',
+                    borderRadius: '10px',
+                    padding: '0.8rem 1.2rem',
+                    textAlign: 'center',
+                    border: '1px solid rgba(255, 140, 66, 0.4)',
+                    fontSize: 'clamp(1rem, 2vw, 1.2rem)',
+                    fontWeight: 'bold',
+                    color: '#f5f5dc'
+                  }}
+                >
+                  {player.name}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Vertical Divider Line */}
+        <div 
+          style={{
+            width: '4px',
+            height: '400px',
+            backgroundColor: '#ff7f50', // Coral orange - same as Family text
+            borderRadius: '2px'
+          }}
+        ></div>
+
+        {/* Right Side - QR Code */}
+        <div 
+          style={{
+            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+            borderRadius: '20px',
+            padding: '2rem',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+            minWidth: '300px'
+          }}
+        >
+          <h3 
+            style={{
+              fontSize: 'clamp(1.2rem, 2.5vw, 1.8rem)',
+              fontWeight: 'bold',
+              color: '#1e3a5f',
+              textAlign: 'center',
+              marginBottom: '1rem'
+            }}
+          >
+            Scan to Join Game
+          </h3>
+          <QRCodeDisplay gameId={gameState.id} />
+        </div>
+      </div>
+
+      {/* Start Game Button */}
+      <div className="flex justify-center mt-8">
+        <button
+          onClick={() => {
+            console.log('🎮 HomePage - Start Game button clicked');
+            console.log('🎮 HomePage - Game state:', gameState);
+            
+            // Re-authenticate as TV Host before starting round
+            if (gameState?.id) {
+              console.log('🎮 HomePage - Re-authenticating as TV Host for game:', gameState.id);
+              emit('join_game', {
+                gameId: gameState.id,
+                playerName: 'TV Host',
+                isHost: true
+              });
+              
+              // Wait a moment then start the round
+              setTimeout(() => {
+                console.log('🎮 HomePage - Starting round after authentication');
+                emit('start_round');
+              }, 100);
+            } else {
+              console.error('❌ HomePage - No game ID available');
+            }
+          }}
+          disabled={connectedPlayers.length < 1} // Changed from 3 to 1 for testing
+          className="px-16 py-8 rounded-xl text-3xl md:text-4xl font-bold transition-all duration-300 transform hover:scale-105 hover:shadow-2xl disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-none"
+          style={{
+            backgroundColor: connectedPlayers.length >= 1 ? '#ff8c42' : '#666666', // Golden orange when enabled, gray when disabled
+            color: '#f5f5dc', // Cream
+            boxShadow: connectedPlayers.length >= 1 
+              ? '0 8px 32px rgba(255, 140, 66, 0.3), 0 4px 16px rgba(0, 0, 0, 0.2)'
+              : '0 4px 16px rgba(0, 0, 0, 0.2)',
+            border: 'none',
+            borderRadius: '12px',
+            padding: '32px 64px',
+            cursor: connectedPlayers.length >= 1 ? 'pointer' : 'not-allowed'
+          }}
+          onMouseEnter={(e) => {
+            if (connectedPlayers.length >= 1) {
+              e.currentTarget.style.backgroundColor = '#ff9f66';
+              e.currentTarget.style.boxShadow = '0 12px 40px rgba(255, 140, 66, 0.4), 0 6px 20px rgba(0, 0, 0, 0.3)';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (connectedPlayers.length >= 1) {
+              e.currentTarget.style.backgroundColor = '#ff8c42';
+              e.currentTarget.style.boxShadow = '0 8px 32px rgba(255, 140, 66, 0.3), 0 4px 16px rgba(0, 0, 0, 0.2)';
+            }
+          }}
+        >
+          {connectedPlayers.length >= 1 ? 'Start Game' : `Need ${1 - connectedPlayers.length} more player(s)`}
+        </button>
       </div>
     </div>
   );

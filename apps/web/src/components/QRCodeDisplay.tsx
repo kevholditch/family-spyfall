@@ -89,13 +89,14 @@ export function QRCodeDisplay({ gameId, className = '' }: QRCodeDisplayProps) {
   }
 
   return (
-    <div className={`text-center ${className}`}>
+    <div className={`text-center ${className}`} data-testid="qr-code-container" data-game-id={gameId}>
       <div className="mb-4">
         <img
           src={qrCodeUrl}
           alt="QR code to join the game"
           className="mx-auto border border-gray-300 rounded-lg"
           style={{ imageRendering: 'pixelated' }}
+          data-testid="qr-code"
         />
       </div>
       <p className="text-sm text-gray-600 mb-2">
