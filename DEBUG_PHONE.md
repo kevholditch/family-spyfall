@@ -92,8 +92,35 @@ The app now has extensive debug logging. Check the browser console on your phone
 - Role assignments
 - Errors
 
-Look for messages like:
-- `🔌 useSocket - Creating new socket connection to:`
-- `👤 JoinPage - Player successfully joined:`
-- `🎭 GamePage - Role assignment received:`
+### On JoinPage (when joining):
+Look for:
+- `🔌 useSocket - Creating new socket connection to:` - Should show your IP, not localhost
+- `👤 [YourName] Successfully joined the game`
+- When round starts: `🎮 JoinPage - Game started, redirecting to game page`
+
+### On GamePage (after redirect):
+Look for:
+- `🔄 GamePage - Rejoin effect triggered:` - Check serverUrl is your IP
+- `📡 GamePage - Emitting join_game for reconnection...`
+- `📡 GamePage - Socket connected to:` - Should be `http://YOUR_IP:4000`
+- `🎭 useSocket - Received role_assignment event:` - **THIS IS THE KEY!**
+  - If you see this, role assignment is working
+  - If you DON'T see this, the server isn't sending it or socket isn't receiving
+
+### If GamePage stays on "Waiting for Game to Start...":
+
+Check the debug indicator on the screen:
+- `gameState=✓` means game state was loaded
+- `roleAssignment=✗` means role assignment not received (THIS IS THE PROBLEM)
+
+Then check console for:
+- Did you see `🎭 useSocket - Received role_assignment event:`?
+- Did you see `📡 GamePage - Emitting join_game for reconnection...`?
+- Are there any errors?
+
+### Server Console
+
+Watch for when phone player rejoins on GamePage:
+- Should see: `📤 Server - Sending role assignment to player [Name]`
+- Check the sockets in room - should not be "NONE"
 

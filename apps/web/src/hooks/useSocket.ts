@@ -47,6 +47,7 @@ export function useSocket(serverUrl: string = 'http://localhost:4000'): UseSocke
     });
 
     newSocket.on('role_assignment', (data) => {
+      debugLog('🎭 useSocket - Received role_assignment event:', data);
       setRoleAssignment(data);
     });
 

@@ -48,20 +48,39 @@ export function GamePage() {
 
   // Auto-rejoin the game when the page loads (only once!)
   useEffect(() => {
+    debugLog('🔄 GamePage - Rejoin effect triggered:', { 
+      isConnected, 
+      gameId, 
+      hasRejoined,
+      serverUrl
+    });
+    
     if (isConnected && gameId && !hasRejoined) {
       const playerId = sessionStorage.getItem('playerId');
       const playerSecret = sessionStorage.getItem('playerSecret');
+      const playerName = sessionStorage.getItem('playerName');
       
-      debugLog('🔄 GamePage - Auto-rejoining game:', { gameId, playerId, hasSecret: !!playerSecret });
+      debugLog('🔄 GamePage - Auto-rejoining game:', { 
+        gameId, 
+        playerId, 
+        playerName,
+        hasSecret: !!playerSecret,
+        serverUrl
+      });
       
       if (playerId && playerSecret) {
+        debugLog('📡 GamePage - Emitting join_game for reconnection...');
+        debugLog('📡 GamePage - Socket connected to:', serverUrl);
+        debugLog('📡 GamePage - Credentials:', { playerId, playerName, hasSecret: !!playerSecret });
+        
         emit('join_game', {
           gameId,
-          playerName: sessionStorage.getItem('playerName') || 'Player',
+          playerName: playerName || 'Player',
           playerId,
           secret: playerSecret
         });
         setHasRejoined(true);
+        debugLog('✅ GamePage - join_game emitted, fetching game state...');
         
         // Fetch game state from API
         fetch(`${serverUrl}/api/games/${gameId}`)
@@ -108,12 +127,23 @@ export function GamePage() {
   }
 
   if (!gameState || !roleAssignment) {
+    debugLog('⏳ GamePage - Waiting for game data:', { 
+      hasGameState: !!gameState, 
+      hasRoleAssignment: !!roleAssignment,
+      gameState: gameState ? { status: gameState.status, roundNumber: gameState.roundNumber } : null
+    });
+    
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
         <div className="bg-gray-800 rounded-lg shadow-lg p-8 max-w-md w-full text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500 mx-auto mb-6"></div>
           <h2 className="text-2xl font-bold text-white mb-2">Waiting for Game to Start...</h2>
           <p className="text-gray-400">The host will start the game when ready</p>
+          {process.env.NODE_ENV === 'development' && (
+            <div className="mt-4 text-xs text-gray-500">
+              <p>Debug: gameState={!!gameState ? '✓' : '✗'}, roleAssignment={!!roleAssignment ? '✓' : '✗'}</p>
+            </div>
+          )}
         </div>
       </div>
     );
