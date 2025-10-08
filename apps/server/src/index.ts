@@ -585,7 +585,10 @@ setInterval(() => {
 }, 300000); // Check every 5 minutes
 
 const PORT = parseInt(process.env.SERVER_PORT || '4000');
-server.listen(PORT, () => {
-  console.log(`Spyfall server running on port ${PORT}`);
+const HOST = process.env.HOST || '0.0.0.0'; // Bind to all interfaces for network access
+
+server.listen(PORT, HOST, () => {
+  console.log(`Spyfall server running on ${HOST}:${PORT}`);
   console.log(`Web origin: ${process.env.WEB_ORIGIN || 'http://localhost:5173'}`);
+  console.log(`Access from network: http://YOUR_IP:${PORT}`);
 });

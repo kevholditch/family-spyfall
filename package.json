@@ -8,7 +8,8 @@
     "build": "pnpm -r build",
     "test": "pnpm -r test",
     "lint": "pnpm -r lint",
-    "e2e": "pnpm -C apps/web test:e2e"
+    "e2e": "pnpm -C apps/web test:e2e",
+    "network-url": "./scripts/show-network-url.sh"
   },
   "devDependencies": {
     "@types/node": "^20.10.0",
