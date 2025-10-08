@@ -1,114 +1,55 @@
-import { test, expect, Page } from '@playwright/test';
+import { test, expect } from '@playwright/test';
+import { PlayerBuilder, HostBuilder, TestSetup } from './helpers/TestBuilders';
 
 test.describe('Spyfall Game Logic', () => {
   test('verifies game logic with three players', async ({ browser }) => {
     console.log('🚀 Starting test: verifies game logic with three players');
     
-    // Create contexts for host (TV) and three players
-    console.log('📱 Creating browser contexts...');
-    const hostContext = await browser.newContext();
-    const playerAContext = await browser.newContext();
-    const playerBContext = await browser.newContext();
-    const playerCContext = await browser.newContext();
-
-    console.log('📄 Creating pages...');
-    const hostPage = await hostContext.newPage();
-    const playerAPage = await playerAContext.newPage();
-    const playerBPage = await playerBContext.newPage();
-    const playerCPage = await playerCContext.newPage();
+    const playerBuilder = new PlayerBuilder(browser);
+    const hostBuilder = new HostBuilder(browser);
+    const setup = new TestSetup(playerBuilder, hostBuilder);
 
     try {
-      // Given: Server is started (handled by Playwright config)
       console.log('✅ Server should be started by Playwright config');
       
-      // Host creates a game
-      console.log('🏠 Host navigating to home page...');
-      await hostPage.goto('/');
-      
-      console.log('⏳ Waiting for Create New Game button...');
-      await hostPage.waitForSelector('button:has-text("Create New Game")');
-      
-      console.log('🖱️  Clicking Create New Game button...');
-      await hostPage.click('button:has-text("Create New Game")');
-      
-      // Wait for game to be created and extract game ID
-      console.log('⏳ Waiting for Game ID to appear...');
-      await hostPage.waitForSelector('text=Game ID:', { timeout: 10000 });
-      
-      console.log('🔍 Extracting game ID...');
-      const gameIdElement = await hostPage.locator('strong.text-yellow-400').first();
-      const gameId = await gameIdElement.textContent();
+      // Create host and start game
+      const host = await setup.createHost();
+      await host.goToHome();
+      const gameId = await host.createGame();
       expect(gameId).toBeTruthy();
-      
-      console.log(`✅ Game created with ID: ${gameId}`);
 
-      // And: Player A joins with name "player a"
-      await joinGame(playerAPage, gameId!, 'player a');
-      
-      // And: Player B joins with name "player b"
-      await joinGame(playerBPage, gameId!, 'player b');
-      
-      // And: Player C joins with name "player c"
-      await joinGame(playerCPage, gameId!, 'player c');
+      // Create and join players
+      const playerA = await setup.createPlayer('player a');
+      const playerB = await setup.createPlayer('player b');
+      const playerC = await setup.createPlayer('player c');
 
-      // Verify all players are visible on the host page
-      console.log('⏳ Verifying all players are visible on host page...');
-      await hostPage.waitForSelector('text=player a', { timeout: 5000 });
-      console.log('✅ Player A visible on host page');
-      await hostPage.waitForSelector('text=player b', { timeout: 5000 });
-      console.log('✅ Player B visible on host page');
-      await hostPage.waitForSelector('text=player c', { timeout: 5000 });
-      console.log('✅ Player C visible on host page');
+      await playerA.joinGame(gameId);
+      await playerB.joinGame(gameId);
+      await playerC.joinGame(gameId);
 
-      // When: The host clicks "start round 1"
-      console.log('⏳ Waiting for Start Round 1 button...');
-      await hostPage.waitForSelector('button:has-text("Start Round 1")', { timeout: 5000 });
-      console.log('🖱️  Clicking Start Round 1 button...');
-      await hostPage.click('button:has-text("Start Round 1")');
+      // Verify all players are visible on host page
+      await host.waitForPlayersVisible(['player a', 'player b', 'player c']);
 
-      // Wait for round to start
-      console.log('⏳ Waiting for round to start...');
-      await hostPage.waitForSelector('text=Round 1', { timeout: 5000 });
-      console.log('✅ Round 1 started!');
+      // When: The host starts round 1
+      await host.startRound();
 
-      // Wait for players to be redirected to game page
+      // Wait for players to be redirected and receive roles
       console.log('⏳ Waiting for players to redirect to game page...');
-      await playerAPage.waitForURL(/\/game\//, { timeout: 10000 });
-      console.log('✅ Player A redirected to game page');
-      await playerBPage.waitForURL(/\/game\//, { timeout: 10000 });
-      console.log('✅ Player B redirected to game page');
-      await playerCPage.waitForURL(/\/game\//, { timeout: 10000 });
-      console.log('✅ Player C redirected to game page');
+      await playerA.waitForGamePage();
+      await playerB.waitForGamePage();
+      await playerC.waitForGamePage();
+      console.log('✅ All players redirected to game page');
 
-      // Then: Verify all players received their roles
-      console.log('⏳ Verifying all players received their roles...');
-      // Check for either spy or civilian role display
-      await Promise.race([
-        playerAPage.waitForSelector('text=YOU ARE THE SPY!', { timeout: 10000 }),
-        playerAPage.waitForSelector('text=YOUR LOCATION', { timeout: 10000 })
-      ]);
-      console.log('✅ Player A received role');
-      
-      await Promise.race([
-        playerBPage.waitForSelector('text=YOU ARE THE SPY!', { timeout: 10000 }),
-        playerBPage.waitForSelector('text=YOUR LOCATION', { timeout: 10000 })
-      ]);
-      console.log('✅ Player B received role');
-      
-      await Promise.race([
-        playerCPage.waitForSelector('text=YOU ARE THE SPY!', { timeout: 10000 }),
-        playerCPage.waitForSelector('text=YOUR LOCATION', { timeout: 10000 })
-      ]);
-      console.log('✅ Player C received role');
+      await playerA.waitForRole();
+      await playerB.waitForRole();
+      await playerC.waitForRole();
+      console.log('✅ All players received roles');
 
       // Collect role information from all players
       console.log('🔍 Collecting role information from all players...');
-      const playerARoleInfo = await getRoleInfo(playerAPage);
-      console.log('📊 Player A role info:', playerARoleInfo);
-      const playerBRoleInfo = await getRoleInfo(playerBPage);
-      console.log('📊 Player B role info:', playerBRoleInfo);
-      const playerCRoleInfo = await getRoleInfo(playerCPage);
-      console.log('📊 Player C role info:', playerCRoleInfo);
+      const playerARoleInfo = await playerA.getRoleInfo();
+      const playerBRoleInfo = await playerB.getRoleInfo();
+      const playerCRoleInfo = await playerC.getRoleInfo();
 
       const players = [
         { name: 'player a', ...playerARoleInfo },
@@ -162,66 +103,7 @@ test.describe('Spyfall Game Logic', () => {
       console.log('🎉 Test completed successfully!');
 
     } finally {
-      // Cleanup
-      console.log('🧹 Cleaning up browser contexts and pages...');
-      await hostPage.close();
-      await playerAPage.close();
-      await playerBPage.close();
-      await playerCPage.close();
-      await hostContext.close();
-      await playerAContext.close();
-      await playerBContext.close();
-      await playerCContext.close();
-      console.log('✅ Cleanup complete');
+      await setup.cleanup();
     }
   });
 });
-
-// Helper function to join a game
-async function joinGame(page: Page, gameId: string, playerName: string) {
-  console.log(`👤 [${playerName}] Navigating to join page...`);
-  await page.goto(`/join/${gameId}`);
-  
-  // Wait for the join page to load
-  console.log(`👤 [${playerName}] Waiting for player name input...`);
-  await page.waitForSelector('input#playerName', { timeout: 5000 });
-  
-  // Enter player name
-  console.log(`👤 [${playerName}] Entering player name...`);
-  await page.fill('input#playerName', playerName);
-  
-  // Click join button
-  console.log(`👤 [${playerName}] Clicking Join Game button...`);
-  await page.click('button:has-text("Join Game")');
-  
-  // Wait for successful join
-  console.log(`👤 [${playerName}] Waiting for welcome message...`);
-  await page.waitForSelector(`text=Welcome to the game, ${playerName}!`, { timeout: 5000 });
-  
-  console.log(`✅ [${playerName}] Successfully joined the game`);
-}
-
-// Helper function to get role information from a player page
-async function getRoleInfo(page: Page): Promise<{ isSpy: boolean; location?: string }> {
-  console.log('🔍 Getting role info from player page...');
-  
-  // Check if player is spy
-  console.log('🕵️  Checking if player is spy...');
-  const isSpy = await page.locator('text=YOU ARE THE SPY!').isVisible();
-  
-  if (isSpy) {
-    console.log('✅ Player is a SPY');
-    return { isSpy: true };
-  }
-  
-  // If not spy, get the location
-  console.log('👤 Player is a CIVILIAN, getting location...');
-  const locationElement = await page.locator('.text-4xl.font-bold.text-green-400').first();
-  const location = await locationElement.textContent();
-  console.log(`✅ Location retrieved: ${location?.trim()}`);
-  
-  return { 
-    isSpy: false, 
-    location: location?.trim() 
-  };
-}
