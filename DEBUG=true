@@ -1,0 +1,8 @@
+
+> @family-spyfall/server@1.0.0 dev /Users/kevinholditch/code/src/github.com/kevholditch/family-spyfall/apps/server
+> tsx src/index.ts
+
+Spyfall server running on 0.0.0.0:4000
+Web origin: http://localhost:5173
+Access from network: http://YOUR_IP:4000
+ ELIFECYCLE  Command failed with exit code 137.

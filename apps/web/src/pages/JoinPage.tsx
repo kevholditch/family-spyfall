@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { useSocket } from '../hooks/useSocket';
 import { useGameState } from '../hooks/useGameState';
@@ -10,35 +10,83 @@ export function JoinPage() {
   // Use the same host as the web app but port 4000 for the server
   const serverUrl = `${window.location.protocol}//${window.location.hostname}:4000`;
   const { emit, gameUpdate, error, isConnected } = useSocket(serverUrl);
-  const { gameState, currentPlayer, setGame, updateGameState } = useGameState();
+  const { gameState, setGame, updateGameState } = useGameState();
   const [playerName, setPlayerName] = useState('');
   const [isJoining, setIsJoining] = useState(false);
   const [hasJoined, setHasJoined] = useState(false);
+
+  // Helper to add debug messages (console only)
+  const addDebugMsg = useCallback((msg: string) => {
+    debugLog(msg); // Only log to console
+  }, []);
 
   // Handle game updates
   useEffect(() => {
     if (gameUpdate) {
       debugLog('📡 JoinPage received game update:', gameUpdate);
+      addDebugMsg(`📡 Received: ${gameUpdate.type}`);
+      if (gameUpdate.type === 'round_started') {
+        addDebugMsg(`🎯 round_started data: ${JSON.stringify(gameUpdate.data)}`);
+      }
+      
+      // If we receive player_reconnected, it means someone else reconnected
+      // This might mean the game started while we were disconnected
+      if (gameUpdate.type === 'player_reconnected' && hasJoined) {
+        addDebugMsg('🔄 Someone reconnected - checking if game started');
+        // Re-emit join_game to ensure we're in the right room
+        const storedPlayerId = sessionStorage.getItem('playerId');
+        const storedSecret = sessionStorage.getItem('playerSecret');
+        if (storedPlayerId && storedSecret && storedPlayerId !== 'undefined') {
+          addDebugMsg('🔄 Re-joining game to sync state');
+          emit('join_game', {
+            gameId: gameId || '',
+            playerName: playerName.trim(),
+            playerId: storedPlayerId,
+            secret: storedSecret
+          });
+        }
+      }
+      
       updateGameState(gameUpdate);
       
       // If game starts and we've joined, redirect to game page
       if (gameUpdate.type === 'round_started') {
-        debugLog('🎮 JoinPage - round_started received. hasJoined:', hasJoined);
-        if (hasJoined) {
-          debugLog('✅ JoinPage - Redirecting to game page');
-          window.location.href = `/game/${gameId}`;
+        // Check both hasJoined state AND sessionStorage (more reliable)
+        const storedPlayerId = sessionStorage.getItem('playerId');
+        const storedGameId = sessionStorage.getItem('gameId');
+        const hasStoredCredentials = storedPlayerId && storedPlayerId !== 'undefined' && 
+                                     storedGameId && storedGameId !== 'undefined';
+        
+        addDebugMsg(`🎮 round_started! hasJoined=${hasJoined}, hasCreds=${hasStoredCredentials}`);
+        
+        if (hasJoined || hasStoredCredentials) {
+          addDebugMsg('✅ Redirecting to game page...');
+          // Use setTimeout to ensure state updates are processed
+          setTimeout(() => {
+            window.location.href = `/game/${gameId}`;
+          }, 100);
         } else {
-          debugLog('❌ JoinPage - NOT redirecting because hasJoined is false!');
+          addDebugMsg('❌ NOT redirecting! No join state or credentials');
         }
       }
     }
-  }, [gameUpdate, updateGameState, hasJoined]);
+  }, [gameUpdate, updateGameState, hasJoined, gameId, addDebugMsg]);
 
-  // Handle game state changes (like when game starts)
+  // Handle game state changes (like when game starts) - fallback redirect
   useEffect(() => {
-    if (gameState && gameState.status === 'playing' && hasJoined) {
-      debugLog('🎮 JoinPage - Game status changed to playing, redirecting to game page');
-      window.location.href = `/game/${gameId}`;
+    if (gameState && gameState.status === 'playing') {
+      const storedPlayerId = sessionStorage.getItem('playerId');
+      const hasStoredCredentials = storedPlayerId && storedPlayerId !== 'undefined';
+      
+      debugLog('🎮 JoinPage - Game status changed to playing:', {
+        hasJoined,
+        hasStoredCredentials
+      });
+      
+      if (hasJoined || hasStoredCredentials) {
+        debugLog('✅ JoinPage - Fallback redirect to game page');
+        window.location.href = `/game/${gameId}`;
+      }
     }
   }, [gameState, hasJoined, gameId]);
 
@@ -59,25 +107,15 @@ export function JoinPage() {
     if (gameUpdate?.type === 'player_joined' && gameUpdate.data.id) {
       const { id: playerId, secret, name } = gameUpdate.data;
       
-      debugLog('🔍 JoinPage - Processing player_joined event:', {
-        eventName: name,
-        currentPlayerName: playerName,
-        currentPlayerNameTrimmed: playerName.trim(),
-        namesMatch: name === playerName.trim(),
-        isJoining
-      });
+      addDebugMsg(`📥 player_joined: "${name}" (me: "${playerName.trim()}")`);
       
       // Only process this join event if it's for the current player (compare trimmed names)
       if (name === playerName.trim()) {
-        debugLog('✅ JoinPage - Player successfully joined:', { playerId, playerName: name });
-        debugLog('✅ JoinPage - Setting hasJoined to TRUE');
+        addDebugMsg('✅ That\'s me! Setting hasJoined=TRUE');
         setIsJoining(false);
         setHasJoined(true);
       } else {
-        debugLog('⏭️ JoinPage - Ignoring join event for different player:', { 
-          eventPlayerName: name, 
-          currentPlayerName: playerName.trim() 
-        });
+        addDebugMsg(`⏭️ Ignoring, that's someone else`);
         return;
       }
       
@@ -92,15 +130,14 @@ export function JoinPage() {
         setGame(gameState, playerId, secret);
       }
     }
-  }, [gameUpdate, playerName, gameId, gameState, setGame]);
+  }, [gameUpdate, playerName, gameId, gameState, setGame, addDebugMsg]);
 
   const handleJoinGame = () => {
     if (!gameId || !playerName.trim()) {
       return;
     }
 
-    debugLog('🎮 JoinPage - Join button clicked:', { gameId, playerName: playerName.trim() });
-    debugLog('🔄 JoinPage - Setting isJoining to true');
+    addDebugMsg(`🎮 Join button clicked: "${playerName.trim()}"`);
     setIsJoining(true);
     
     // Try to reconnect first if we have stored credentials
@@ -114,7 +151,7 @@ export function JoinPage() {
     if (storedPlayerId && storedSecret && 
         storedPlayerId !== 'undefined' && storedSecret !== 'undefined' &&
         gameId === storedGameId && playerName.trim() === storedPlayerName) {
-      debugLog('📡 JoinPage - Emitting join_game with credentials:', { gameId, playerName: playerName.trim(), playerId: storedPlayerId });
+      addDebugMsg('📡 Emitting join_game (with saved credentials)');
       emit('join_game', {
         gameId,
         playerName: playerName.trim(),
@@ -128,7 +165,7 @@ export function JoinPage() {
       sessionStorage.removeItem('gameId');
       sessionStorage.removeItem('playerName');
       
-      debugLog('📡 JoinPage - Emitting join_game without credentials:', { gameId, playerName: playerName.trim() });
+      addDebugMsg('📡 Emitting join_game (new player)');
       emit('join_game', {
         gameId,
         playerName: playerName.trim()
@@ -217,14 +254,6 @@ export function JoinPage() {
               The host will start the game when ready
             </div>
             
-            {process.env.NODE_ENV === 'development' && (
-              <div className="mt-4 p-3 bg-gray-100 rounded text-xs font-mono">
-                <p className="font-bold mb-1">Debug Info:</p>
-                <p>hasJoined: {hasJoined ? '✅ TRUE' : '❌ FALSE'}</p>
-                <p>isJoining: {isJoining ? 'TRUE' : 'FALSE'}</p>
-                <p>playerName: "{playerName}"</p>
-              </div>
-            )}
           </div>
         </div>
       </div>
