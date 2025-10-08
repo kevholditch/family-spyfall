@@ -1,28 +1,28 @@
-import { useState, useEffect } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { GameState, Player, GameUpdate } from '../types';
+import { debugLog, debugError } from '../utils/debug';
 
 export function useGameState() {
   const [gameState, setGameState] = useState<GameState | null>(null);
-  const [currentPlayer, setCurrentPlayer] = useState<Player | null>(null);
   const [playerId, setPlayerId] = useState<string | null>(null);
   const [playerSecret, setPlayerSecret] = useState<string | null>(null);
 
-  const updateGameState = (update: GameUpdate) => {
-    console.log('🔄 useGameState - Received update:', update);
+  const updateGameState = useCallback((update: GameUpdate) => {
+    debugLog('🔄 useGameState - Received update:', update);
     setGameState(prev => {
       if (!prev) {
-        console.log('❌ useGameState - No previous state, ignoring update');
+        debugLog('❌ useGameState - No previous state, ignoring update');
         return prev;
       }
 
-      console.log('📊 useGameState - Current state before update:', {
+      debugLog('📊 useGameState - Current state before update:', {
         totalPlayers: prev.players.length,
         players: prev.players.map(p => ({ name: p.name, id: p.id, isConnected: p.isConnected }))
       });
 
       switch (update.type) {
         case 'player_joined':
-          console.log('🔍 useGameState - Player joined data structure:', {
+          debugLog('🔍 useGameState - Player joined data structure:', {
             updateData: update.data,
             updateDataType: typeof update.data,
             updateDataKeys: Object.keys(update.data || {}),
@@ -35,20 +35,20 @@ export function useGameState() {
           
           // Skip TV Host - it's not a real player
           if (update.data.name === 'TV Host') {
-            console.log('⚠️ useGameState - Skipping TV Host, not a real player');
+            debugLog('⚠️ useGameState - Skipping TV Host, not a real player');
             return prev;
           }
           
           // Check if player already exists to prevent duplicates
           const playerExists = prev.players.some(p => p.id === update.data.id);
           if (playerExists) {
-            console.log('⚠️ useGameState - Player already exists, skipping duplicate:', update.data.name);
+            debugLog('⚠️ useGameState - Player already exists, skipping duplicate:', update.data.name);
             return prev;
           }
           
           // Safety check - prevent memory leaks
           if (prev.players.length > 20) {
-            console.error('🚨 useGameState - Too many players detected, possible memory leak. Resetting state.');
+            debugError('🚨 useGameState - Too many players detected, possible memory leak. Resetting state.');
             return {
               ...prev,
               players: prev.players.slice(-10), // Keep only last 10 players
@@ -61,7 +61,7 @@ export function useGameState() {
             players: [...prev.players, update.data],
             lastActivity: Date.now()
           };
-          console.log('✅ useGameState - Player joined, new state:', {
+          debugLog('✅ useGameState - Player joined, new state:', {
             totalPlayers: newState.players.length,
             players: newState.players.map(p => ({ name: p.name, id: p.id, isConnected: p.isConnected }))
           });
@@ -107,26 +107,25 @@ export function useGameState() {
             lastActivity: Date.now()
           };
 
-        case 'accusation_started':
+        case 'accuse_mode_started':
           return {
             ...prev,
-            status: 'voting',
-            accusation: {
-              accusedPlayerId: update.data.accusedPlayerId,
-              votes: {}
+            status: 'accusing',
+            accuseMode: {
+              playerVotes: {}
             },
             lastActivity: Date.now()
           };
 
         case 'vote_cast':
-          if (prev.accusation) {
+          if (prev.accuseMode) {
             return {
               ...prev,
-              accusation: {
-                ...prev.accusation,
-                votes: {
-                  ...prev.accusation.votes,
-                  [update.data.voterId]: update.data.vote
+              accuseMode: {
+                ...prev.accuseMode,
+                playerVotes: {
+                  ...prev.accuseMode.playerVotes,
+                  [update.data.voterId]: update.data.accusedPlayerId || ''
                 }
               },
               lastActivity: Date.now()
@@ -134,11 +133,39 @@ export function useGameState() {
           }
           return prev;
 
-        case 'accusation_cancelled':
+        case 'spy_guess_submitted':
+          if (prev.accuseMode) {
+            return {
+              ...prev,
+              accuseMode: {
+                ...prev.accuseMode,
+                spyLocationGuess: update.data.locationGuess
+              },
+              lastActivity: Date.now()
+            };
+          }
+          return prev;
+
+        case 'round_summary':
           return {
             ...prev,
-            status: 'playing',
-            accusation: undefined,
+            status: 'round_summary',
+            roundResult: update.data.roundResult,
+            players: prev.players.map(p => {
+              const updated = update.data.players?.find((up: any) => up.id === p.id);
+              return updated ? { ...p, score: updated.score } : p;
+            }),
+            lastActivity: Date.now()
+          };
+
+        case 'scores_updated':
+          return {
+            ...prev,
+            status: update.data.status || prev.status,
+            players: prev.players.map(p => {
+              const updated = update.data.players?.find((up: any) => up.id === p.id);
+              return updated ? { ...p, score: updated.score } : p;
+            }),
             lastActivity: Date.now()
           };
 
@@ -162,20 +189,21 @@ export function useGameState() {
           return prev;
       }
     });
-  };
+  }, []); // Empty dependency array since we only use setGameState which is stable
 
-  const setGame = (game: GameState, playerId: string, secret: string) => {
+  const setGame = useCallback((game: GameState, playerId: string, secret: string) => {
     setGameState(game);
     setPlayerId(playerId);
     setPlayerSecret(secret);
-    setCurrentPlayer(game.players.find(p => p.id === playerId) || null);
-  };
+  }, []);
 
-  useEffect(() => {
+  // Derive currentPlayer from gameState and playerId using useMemo
+  const currentPlayer = useMemo(() => {
     if (gameState && playerId) {
-      setCurrentPlayer(gameState.players.find(p => p.id === playerId) || null);
+      return gameState.players.find(p => p.id === playerId) || null;
     }
-  }, [gameState, playerId]);
+    return null;
+  }, [gameState?.players, playerId]);
 
   return {
     gameState,

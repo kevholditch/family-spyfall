@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { SocketEvents, GameUpdate, RoleAssignment } from '../types';
+import { debugLog, debugError } from '../utils/debug';
 
 interface UseSocketReturn {
   socket: Socket<SocketEvents> | null;
@@ -20,7 +21,7 @@ export function useSocket(serverUrl: string = 'http://localhost:4000'): UseSocke
   const socketRef = useRef<Socket<SocketEvents> | null>(null);
 
   useEffect(() => {
-    console.log('🔌 useSocket - Creating new socket connection to:', serverUrl);
+    debugLog('🔌 useSocket - Creating new socket connection to:', serverUrl);
     const newSocket = io(serverUrl, {
       transports: ['websocket', 'polling']
     });
@@ -41,7 +42,7 @@ export function useSocket(serverUrl: string = 'http://localhost:4000'): UseSocke
     });
 
     newSocket.on('game_update', (update) => {
-      console.log('🔌 useSocket - Received game_update event:', update);
+      debugLog('🔌 useSocket - Received game_update event:', update);
       setGameUpdate(update);
     });
 
@@ -61,12 +62,12 @@ export function useSocket(serverUrl: string = 'http://localhost:4000'): UseSocke
     event: K,
     ...args: Parameters<SocketEvents[K]>
   ) => {
-    console.log('🔌 useSocket - emit called:', { event, args, hasSocket: !!socketRef.current });
+    debugLog('🔌 useSocket - emit called:', { event, args, hasSocket: !!socketRef.current });
     if (socketRef.current) {
       socketRef.current.emit(event, ...args);
-      console.log('🔌 useSocket - event emitted successfully');
+      debugLog('🔌 useSocket - event emitted successfully');
     } else {
-      console.error('🔌 useSocket - No socket available to emit event!');
+      debugError('🔌 useSocket - No socket available to emit event!');
     }
   };
 

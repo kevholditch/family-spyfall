@@ -9,6 +9,7 @@ import { GameManager } from './game/GameManager';
 import { SocketEvents } from './types';
 import { joinRateLimiter, accusationRateLimiter } from './utils/rateLimiter';
 import { validatePlayerName, validateGameId, validatePlayerId, validateSecret, sanitizePlayerName } from './utils/validation';
+import { debugLog, debugError, infoLog, errorLog } from './utils/debug';
 
 dotenv.config();
 
@@ -99,21 +100,21 @@ io.on('connection', (socket) => {
   socket.on('join_game', (data: { gameId: string; playerName: string; playerId?: string; secret?: string; isHost?: boolean }) => {
     try {
       const { gameId, playerName, playerId, secret, isHost } = data;
-      console.log(`Player attempting to join game ${gameId}:`, { playerName, playerId, secret, isHost });
-      console.log('Socket connected:', socket.connected);
-      console.log('Socket ID:', socket.id);
+      debugLog(`Player attempting to join game ${gameId}:`, { playerName, playerId, secret, isHost });
+      debugLog('Socket connected:', socket.connected);
+      debugLog('Socket ID:', socket.id);
 
       // Validate inputs
       const gameIdValidation = validateGameId(gameId);
       if (!gameIdValidation.isValid) {
-        console.log('Game ID validation failed:', gameIdValidation.error);
+        debugLog('Game ID validation failed:', gameIdValidation.error);
         socket.emit('error', { message: gameIdValidation.error });
         return;
       }
 
       const nameValidation = validatePlayerName(playerName);
       if (!nameValidation.isValid) {
-        console.log('Player name validation failed:', nameValidation.error);
+        debugLog('Player name validation failed:', nameValidation.error);
         socket.emit('error', { message: nameValidation.error });
         return;
       }
@@ -153,7 +154,7 @@ io.on('connection', (socket) => {
           socket.join(playerId);
           
           // Send role assignment if game is active
-          if (game.status === 'playing' || game.status === 'voting') {
+          if (game.status === 'playing' || game.status === 'accusing') {
             socket.emit('role_assignment', {
               role: existingPlayer.role,
               location: existingPlayer.location
@@ -172,7 +173,7 @@ io.on('connection', (socket) => {
 
       // If this is the TV Host (isHost flag and named "TV Host"), just join the room without creating a player
       if (isHost && sanitizedName === 'TV Host') {
-        console.log(`🎮 Server - TV Host joining game ${gameId} (not added to players)`);
+        debugLog(`🎮 Server - TV Host joining game ${gameId} (not added to players)`);
         const hostId = uuidv4();
         const hostSecret = uuidv4();
         
@@ -182,7 +183,7 @@ io.on('connection', (socket) => {
         // Join the game room to receive updates
         socket.join(gameId);
         socket.join(hostId);
-        console.log(`🔗 Server - TV Host socket ${socket.id} joined rooms: [${gameId}, ${hostId}]`);
+        debugLog(`🔗 Server - TV Host socket ${socket.id} joined rooms: [${gameId}, ${hostId}]`);
         
         // Send success response to the host
         socket.emit('game_update', {
@@ -201,22 +202,22 @@ io.on('connection', (socket) => {
 
       // New player joining
       const isFirstPlayer = game.players.length === 0;
-      console.log(`🎮 Server - Adding player "${sanitizedName}" to game ${gameId}. Current players: ${game.players.length}, isHost: ${isFirstPlayer}`);
+      debugLog(`🎮 Server - Adding player "${sanitizedName}" to game ${gameId}. Current players: ${game.players.length}, isHost: ${isFirstPlayer}`);
       
       const result = gameManager.addPlayer(gameId, sanitizedName, isFirstPlayer);
 
       if (!result) {
         if (game.players.some(p => p.name.toLowerCase() === sanitizedName.toLowerCase())) {
-          console.log(`❌ Server - Name "${sanitizedName}" already taken`);
+          debugLog(`❌ Server - Name "${sanitizedName}" already taken`);
           socket.emit('error', { message: 'Name already taken' });
         } else {
-          console.log(`❌ Server - Game ${gameId} is full`);
+          debugLog(`❌ Server - Game ${gameId} is full`);
           socket.emit('error', { message: 'Game is full' });
         }
         return;
       }
 
-      console.log(`✅ Server - Player "${sanitizedName}" added successfully. Player ID: ${result.playerId}`);
+      debugLog(`✅ Server - Player "${sanitizedName}" added successfully. Player ID: ${result.playerId}`);
 
       currentGameId = gameId;
       currentPlayerId = result.playerId;
@@ -224,12 +225,12 @@ io.on('connection', (socket) => {
       // Join both the game room and player-specific room
       socket.join(gameId);
       socket.join(result.playerId);
-      console.log(`🔗 Server - Socket ${socket.id} joined rooms: [${gameId}, ${result.playerId}]`);
+      debugLog(`🔗 Server - Socket ${socket.id} joined rooms: [${gameId}, ${result.playerId}]`);
 
       // Broadcast player joined to others (not to self) - send the complete player object
       const newPlayer = game.players.find(p => p.id === result.playerId);
       if (!newPlayer) {
-        console.error('❌ Server - Could not find newly added player in game');
+        debugError('❌ Server - Could not find newly added player in game');
         return;
       }
       
@@ -237,8 +238,8 @@ io.on('connection', (socket) => {
         type: 'player_joined',
         data: newPlayer // Send the complete Player object
       };
-      console.log('Broadcasting player_joined:', updateData);
-      console.log(`📊 Server - Current game state after adding player:`, {
+      debugLog('Broadcasting player_joined:', updateData);
+      debugLog(`📊 Server - Current game state after adding player:`, {
         totalPlayers: game.players.length,
         players: game.players.map(p => ({ name: p.name, id: p.id, isConnected: p.isConnected }))
       });
@@ -249,44 +250,44 @@ io.on('connection', (socket) => {
       socket.emit('game_update', updateData);
 
     } catch (error) {
-      console.error('Error joining game:', error);
+      errorLog('Error joining game:', error);
       socket.emit('error', { message: 'Internal server error' });
     }
   });
 
   // Start round
   socket.on('start_round', () => {
-    console.log('🎮 start_round called');
-    console.log('  currentGameId:', currentGameId);
-    console.log('  currentPlayerId:', currentPlayerId);
+    debugLog('🎮 start_round called');
+    debugLog('  currentGameId:', currentGameId);
+    debugLog('  currentPlayerId:', currentPlayerId);
     
     if (!currentGameId || !currentPlayerId) {
-      console.log('  ❌ Missing gameId or playerId, returning');
+      debugLog('  ❌ Missing gameId or playerId, returning');
       return;
     }
 
     const game = gameManager.getGame(currentGameId);
     if (!game) {
-      console.log('  ❌ Game not found, returning');
+      debugLog('  ❌ Game not found, returning');
       return;
     }
 
-    console.log('  📊 Game players:', game.players.map(p => ({ id: p.id, name: p.name, isHost: p.isHost })));
+    debugLog('  📊 Game players:', game.players.map(p => ({ id: p.id, name: p.name, isHost: p.isHost })));
     
     // Note: TV Host is not in the players array, so player will be undefined for TV Host
     // Only block if we found a player (not TV Host) AND that player is not a host
     const player = game.players.find(p => p.id === currentPlayerId);
-    console.log('  👤 Player lookup result:', player ? { id: player.id, name: player.name, isHost: player.isHost } : 'undefined (TV Host)');
-    console.log('  🔍 Condition check: player =', !!player, ', player.isHost =', player?.isHost);
-    console.log('  🔍 Will block?', player && !player.isHost);
+    debugLog('  👤 Player lookup result:', player ? { id: player.id, name: player.name, isHost: player.isHost } : 'undefined (TV Host)');
+    debugLog('  🔍 Condition check: player =', !!player, ', player.isHost =', player?.isHost);
+    debugLog('  🔍 Will block?', player && !player.isHost);
     
     if (player && !player.isHost) {
-      console.log('  ❌ BLOCKING: Player found but is not host');
+      debugLog('  ❌ BLOCKING: Player found but is not host');
       socket.emit('error', { message: 'Only the host can start a round' });
       return;
     }
     
-    console.log('  ✅ Permission check passed, continuing...');
+    debugLog('  ✅ Permission check passed, continuing...');
 
     // TV Host is no longer in the players array, so just count all players
     if (game.players.length < 1) {
@@ -300,8 +301,8 @@ io.on('connection', (socket) => {
       return;
     }
 
-    console.log(`🎮 Server - Starting round for game ${currentGameId}`);
-    console.log(`📊 Server - Game state after startRound:`, {
+    debugLog(`🎮 Server - Starting round for game ${currentGameId}`);
+    debugLog(`📊 Server - Game state after startRound:`, {
       totalPlayers: game.players.length,
       players: game.players.map(p => ({ name: p.name, id: p.id, isConnected: p.isConnected, role: p.role })),
       status: game.status,
@@ -310,9 +311,9 @@ io.on('connection', (socket) => {
 
     // Send role assignments to all players
     game.players.forEach(player => {
-      console.log(`📤 Server - Sending role assignment to player ${player.name} (${player.id})`);
+      debugLog(`📤 Server - Sending role assignment to player ${player.name} (${player.id})`);
       const socketsInPlayerRoom = io.sockets.adapter.rooms.get(player.id);
-      console.log(`  📤 Sockets in room ${player.id}:`, socketsInPlayerRoom ? Array.from(socketsInPlayerRoom) : 'NONE - THIS IS THE PROBLEM!');
+      debugLog(`  📤 Sockets in room ${player.id}:`, socketsInPlayerRoom ? Array.from(socketsInPlayerRoom) : 'NONE - THIS IS THE PROBLEM!');
       io.to(player.id).emit('role_assignment', {
         role: player.role,
         location: player.location
@@ -320,10 +321,10 @@ io.on('connection', (socket) => {
     });
 
     // Broadcast round started
-    console.log(`📡 Server - Broadcasting round_started to game ${currentGameId}`);
+    debugLog(`📡 Server - Broadcasting round_started to game ${currentGameId}`);
     const socketsInRoom = io.sockets.adapter.rooms.get(currentGameId);
-    console.log(`📡 Server - Sockets in room ${currentGameId}:`, socketsInRoom ? Array.from(socketsInRoom) : 'none');
-    console.log(`📡 Server - Total sockets in room: ${socketsInRoom?.size || 0}`);
+    debugLog(`📡 Server - Sockets in room ${currentGameId}:`, socketsInRoom ? Array.from(socketsInRoom) : 'none');
+    debugLog(`📡 Server - Total sockets in room: ${socketsInRoom?.size || 0}`);
     
     io.to(currentGameId).emit('game_update', {
       type: 'round_started',
@@ -332,111 +333,176 @@ io.on('connection', (socket) => {
         currentPlayerIndex: game.currentPlayerIndex
       }
     });
-    console.log(`📡 Server - round_started broadcast complete`);
+    debugLog(`📡 Server - round_started broadcast complete`);
   });
 
-  // Advance turn
-  socket.on('advance_turn', () => {
+  // Next turn (player clicked "Next" button after asking question)
+  socket.on('next_turn', () => {
     if (!currentGameId || !currentPlayerId) return;
 
     const game = gameManager.getGame(currentGameId);
     if (!game) return;
 
-    const player = game.players.find(p => p.id === currentPlayerId);
-    if (player && !player.isHost) {
-      socket.emit('error', { message: 'Only the host can advance turns' });
-      return;
+    // Only the current player can advance their own turn
+    if (game.currentPlayerIndex >= 0 && game.currentPlayerIndex < game.players.length) {
+      const currentPlayer = game.players[game.currentPlayerIndex];
+      if (currentPlayer.id !== currentPlayerId) {
+        socket.emit('error', { message: 'Only the current player can advance the turn' });
+        return;
+      }
     }
 
-    const success = gameManager.advanceTurn(currentGameId);
+    const success = gameManager.nextTurn(currentGameId);
     if (!success) {
       socket.emit('error', { message: 'Failed to advance turn' });
       return;
     }
 
-    io.to(currentGameId).emit('game_update', {
-      type: 'turn_advanced',
-      data: { currentPlayerIndex: game.currentPlayerIndex }
-    });
+    // Check if game transitioned to accuse mode
+    if (game.status === 'accusing') {
+      io.to(currentGameId).emit('game_update', {
+        type: 'accuse_mode_started',
+        data: {}
+      });
+    } else {
+      io.to(currentGameId).emit('game_update', {
+        type: 'turn_advanced',
+        data: { currentPlayerIndex: game.currentPlayerIndex }
+      });
+    }
   });
 
-  // Accuse player
-  socket.on('accuse_player', (data: { accusedPlayerId: string }) => {
+  // Submit spy's location guess
+  socket.on('submit_spy_guess', (data: { locationGuess: string }) => {
+    if (!currentGameId || !currentPlayerId) return;
+
+    const { locationGuess } = data;
+    const game = gameManager.getGame(currentGameId);
+    if (!game) return;
+
+    const success = gameManager.submitSpyGuess(currentGameId, currentPlayerId, locationGuess);
+    if (!success) {
+      socket.emit('error', { message: 'Failed to submit guess' });
+      return;
+    }
+
+    // Broadcast that spy has submitted (without revealing the guess)
+    io.to(currentGameId).emit('game_update', {
+      type: 'spy_guess_submitted',
+      data: {}
+    });
+
+    // Check if results need to be sent
+    if (game.status === 'round_summary') {
+      // Broadcast round summary
+      io.to(currentGameId).emit('game_update', {
+        type: 'round_summary',
+        data: {
+          roundResult: game.roundResult,
+          players: game.players.map(p => ({ id: p.id, name: p.name, score: p.score }))
+        }
+      });
+
+      // Auto-restart round after 60 seconds
+      const gameIdForTimeout = currentGameId;
+      setTimeout(() => {
+        if (!gameIdForTimeout) return;
+        const updatedGame = gameManager.getGame(gameIdForTimeout);
+        if (updatedGame && updatedGame.status === 'round_summary') {
+          const success = gameManager.startRound(gameIdForTimeout);
+          if (success) {
+            // Send role assignments
+            updatedGame.players.forEach(player => {
+              io.to(player.id).emit('role_assignment', {
+                role: player.role,
+                location: player.location
+              });
+            });
+
+            // Broadcast round started
+            io.to(gameIdForTimeout).emit('game_update', {
+              type: 'round_started',
+              data: {
+                roundNumber: updatedGame.roundNumber,
+                currentPlayerIndex: updatedGame.currentPlayerIndex
+              }
+            });
+          }
+        }
+      }, 60000); // 60 seconds
+    } else if (game.status === 'playing') {
+      // Question round restarted
+      io.to(currentGameId).emit('game_update', {
+        type: 'turn_advanced',
+        data: { currentPlayerIndex: game.currentPlayerIndex }
+      });
+    }
+  });
+
+  // Submit player vote (civilians voting for who they think is the spy)
+  socket.on('submit_player_vote', (data: { accusedPlayerId: string }) => {
     if (!currentGameId || !currentPlayerId) return;
 
     const { accusedPlayerId } = data;
     const game = gameManager.getGame(currentGameId);
     if (!game) return;
 
-    const player = game.players.find(p => p.id === currentPlayerId);
-    if (player && !player.isHost) {
-      socket.emit('error', { message: 'Only the host can start accusations' });
-      return;
-    }
-
-    // Rate limiting for accusations
-    const clientIP = socket.handshake.address;
-    if (!accusationRateLimiter.isAllowed(clientIP)) {
-      socket.emit('error', { message: 'Too many accusations. Please wait before trying again.' });
-      return;
-    }
-
-    const success = gameManager.startAccusation(currentGameId, accusedPlayerId);
+    const success = gameManager.submitPlayerVote(currentGameId, currentPlayerId, accusedPlayerId);
     if (!success) {
-      socket.emit('error', { message: 'Failed to start accusation' });
+      socket.emit('error', { message: 'Failed to submit vote' });
       return;
     }
 
     io.to(currentGameId).emit('game_update', {
-      type: 'accusation_started',
-      data: { accusedPlayerId }
+      type: 'vote_cast',
+      data: { voterId: currentPlayerId }
     });
-  });
 
-  // Cast vote
-  socket.on('vote', (data: { vote: boolean }) => {
-    if (!currentGameId || !currentPlayerId) return;
-
-    const { vote } = data;
-    const success = gameManager.castVote(currentGameId, currentPlayerId, vote);
-    
-    if (!success) {
-      socket.emit('error', { message: 'Failed to cast vote' });
-      return;
-    }
-
-    const game = gameManager.getGame(currentGameId);
-    if (game?.accusation) {
+    // Check if results need to be sent
+    if (game.status === 'round_summary') {
+      // Broadcast round summary
       io.to(currentGameId).emit('game_update', {
-        type: 'vote_cast',
-        data: { voterId: currentPlayerId, vote }
+        type: 'round_summary',
+        data: {
+          roundResult: game.roundResult,
+          players: game.players.map(p => ({ id: p.id, name: p.name, score: p.score }))
+        }
+      });
+
+      // Auto-restart round after 60 seconds
+      const gameIdForTimeout = currentGameId;
+      setTimeout(() => {
+        if (!gameIdForTimeout) return;
+        const updatedGame = gameManager.getGame(gameIdForTimeout);
+        if (updatedGame && updatedGame.status === 'round_summary') {
+          const success = gameManager.startRound(gameIdForTimeout);
+          if (success) {
+            // Send role assignments
+            updatedGame.players.forEach(player => {
+              io.to(player.id).emit('role_assignment', {
+                role: player.role,
+                location: player.location
+              });
+            });
+
+            // Broadcast round started
+            io.to(gameIdForTimeout).emit('game_update', {
+              type: 'round_started',
+              data: {
+                roundNumber: updatedGame.roundNumber,
+                currentPlayerIndex: updatedGame.currentPlayerIndex
+              }
+            });
+          }
+        }
+      }, 60000); // 60 seconds
+    } else if (game.status === 'playing') {
+      // Question round restarted
+      io.to(currentGameId).emit('game_update', {
+        type: 'turn_advanced',
+        data: { currentPlayerIndex: game.currentPlayerIndex }
       });
     }
-  });
-
-  // Cancel accusation
-  socket.on('cancel_accusation', () => {
-    if (!currentGameId || !currentPlayerId) return;
-
-    const game = gameManager.getGame(currentGameId);
-    if (!game) return;
-
-    const player = game.players.find(p => p.id === currentPlayerId);
-    if (player && !player.isHost) {
-      socket.emit('error', { message: 'Only the host can cancel accusations' });
-      return;
-    }
-
-    const success = gameManager.cancelAccusation(currentGameId);
-    if (!success) {
-      socket.emit('error', { message: 'Failed to cancel accusation' });
-      return;
-    }
-
-    io.to(currentGameId).emit('game_update', {
-      type: 'accusation_cancelled',
-      data: {}
-    });
   });
 
   // End round
@@ -466,14 +532,14 @@ io.on('connection', (socket) => {
 
   // Handle disconnection
   socket.on('disconnect', () => {
-    console.log(`🔌 Socket disconnected: ${socket.id}, gameId: ${currentGameId}, playerId: ${currentPlayerId}`);
+    debugLog(`🔌 Socket disconnected: ${socket.id}, gameId: ${currentGameId}, playerId: ${currentPlayerId}`);
     if (currentGameId && currentPlayerId) {
       const game = gameManager.getGame(currentGameId);
       if (game) {
         const player = game.players.find(p => p.id === currentPlayerId);
         if (player) {
           player.isConnected = false;
-          console.log(`👋 Player ${player.name} disconnected from game ${currentGameId}`);
+          debugLog(`👋 Player ${player.name} disconnected from game ${currentGameId}`);
           
           socket.to(currentGameId).emit('game_update', {
             type: 'player_disconnected',
@@ -490,7 +556,7 @@ setInterval(() => {
   const maxAge = parseInt(process.env.ROOM_TTL_MS || '7200000'); // 2 hours default
   const cleaned = gameManager.cleanupExpiredGames(maxAge);
   if (cleaned > 0) {
-    console.log(`Cleaned up ${cleaned} expired games`);
+    infoLog(`Cleaned up ${cleaned} expired games`);
   }
 }, 300000); // Check every 5 minutes
 

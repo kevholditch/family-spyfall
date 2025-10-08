@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { useSocket } from '../hooks/useSocket';
 import { useGameState } from '../hooks/useGameState';
 import { ArrowLeft, Users } from 'lucide-react';
+import { debugLog } from '../utils/debug';
 
 export function JoinPage() {
   const { gameId } = useParams<{ gameId: string }>();
@@ -17,12 +18,12 @@ export function JoinPage() {
   // Handle game updates
   useEffect(() => {
     if (gameUpdate) {
-      console.log('📡 JoinPage received game update:', gameUpdate);
+      debugLog('📡 JoinPage received game update:', gameUpdate);
       updateGameState(gameUpdate);
       
       // If game starts and we've joined, redirect to game page
       if (gameUpdate.type === 'round_started' && hasJoined) {
-        console.log('🎮 JoinPage - Game started, redirecting to game page');
+        debugLog('🎮 JoinPage - Game started, redirecting to game page');
         window.location.href = `/game/${gameId}`;
       }
     }
@@ -31,14 +32,14 @@ export function JoinPage() {
   // Handle game state changes (like when game starts)
   useEffect(() => {
     if (gameState && gameState.status === 'playing' && hasJoined) {
-      console.log('🎮 JoinPage - Game status changed to playing, redirecting to game page');
+      debugLog('🎮 JoinPage - Game status changed to playing, redirecting to game page');
       window.location.href = `/game/${gameId}`;
     }
   }, [gameState, hasJoined, gameId]);
 
   // Handle successful join
   useEffect(() => {
-    console.log('🔍 JoinPage - Checking for successful join:', {
+    debugLog('🔍 JoinPage - Checking for successful join:', {
       gameUpdateType: gameUpdate?.type,
       gameUpdateData: gameUpdate?.data,
       gameUpdateDataType: typeof gameUpdate?.data,
@@ -55,11 +56,11 @@ export function JoinPage() {
       
       // Only process this join event if it's for the current player
       if (name === playerName) {
-        console.log('✅ JoinPage - Player successfully joined:', { playerId, playerName: name });
+        debugLog('✅ JoinPage - Player successfully joined:', { playerId, playerName: name });
         setIsJoining(false);
         setHasJoined(true);
       } else {
-        console.log('⏭️ JoinPage - Ignoring join event for different player:', { 
+        debugLog('⏭️ JoinPage - Ignoring join event for different player:', { 
           eventPlayerName: name, 
           currentPlayerName: playerName 
         });
@@ -84,8 +85,8 @@ export function JoinPage() {
       return;
     }
 
-    console.log('🎮 JoinPage - Join button clicked:', { gameId, playerName: playerName.trim() });
-    console.log('🔄 JoinPage - Setting isJoining to true');
+    debugLog('🎮 JoinPage - Join button clicked:', { gameId, playerName: playerName.trim() });
+    debugLog('🔄 JoinPage - Setting isJoining to true');
     setIsJoining(true);
     
     // Try to reconnect first if we have stored credentials
@@ -99,7 +100,7 @@ export function JoinPage() {
     if (storedPlayerId && storedSecret && 
         storedPlayerId !== 'undefined' && storedSecret !== 'undefined' &&
         gameId === storedGameId && playerName.trim() === storedPlayerName) {
-      console.log('📡 JoinPage - Emitting join_game with credentials:', { gameId, playerName: playerName.trim(), playerId: storedPlayerId });
+      debugLog('📡 JoinPage - Emitting join_game with credentials:', { gameId, playerName: playerName.trim(), playerId: storedPlayerId });
       emit('join_game', {
         gameId,
         playerName: playerName.trim(),
@@ -113,7 +114,7 @@ export function JoinPage() {
       sessionStorage.removeItem('gameId');
       sessionStorage.removeItem('playerName');
       
-      console.log('📡 JoinPage - Emitting join_game without credentials:', { gameId, playerName: playerName.trim() });
+      debugLog('📡 JoinPage - Emitting join_game without credentials:', { gameId, playerName: playerName.trim() });
       emit('join_game', {
         gameId,
         playerName: playerName.trim()
@@ -121,7 +122,7 @@ export function JoinPage() {
     }
   };
 
-  console.log('🔌 JoinPage - Socket connection status:', { isConnected, serverUrl, gameId });
+  debugLog('🔌 JoinPage - Socket connection status:', { isConnected, serverUrl, gameId });
   
   if (!isConnected) {
     return (

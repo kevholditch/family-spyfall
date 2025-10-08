@@ -5,6 +5,16 @@ export interface Player {
   isConnected: boolean;
   role?: 'spy' | 'civilian';
   location?: string;
+  score: number;
+  hasAskedQuestion?: boolean;
+}
+
+export interface RoundResult {
+  spyGuessedCorrectly: boolean;
+  civiliansWon: boolean;
+  spyGuess?: string;
+  correctLocation: string;
+  pointsAwarded: Record<string, number>; // playerId -> points awarded this round
 }
 
 export interface GameState {
@@ -12,17 +22,18 @@ export interface GameState {
   players: Player[];
   currentPlayerIndex: number;
   roundNumber: number;
-  status: 'waiting' | 'playing' | 'voting' | 'finished';
+  status: 'waiting' | 'playing' | 'accusing' | 'round_summary' | 'finished';
   currentLocation?: string;
-  accusation?: {
-    accusedPlayerId: string;
-    votes: Record<string, boolean>;
+  accuseMode?: {
+    spyLocationGuess?: string;
+    playerVotes: Record<string, string>; // voterId -> accused playerId
   };
+  roundResult?: RoundResult;
   createdAt: number;
 }
 
 export interface GameUpdate {
-  type: 'player_joined' | 'player_left' | 'player_reconnected' | 'player_disconnected' | 'round_started' | 'turn_advanced' | 'accusation_started' | 'vote_cast' | 'accusation_cancelled' | 'round_ended' | 'game_finished';
+  type: 'player_joined' | 'player_left' | 'player_reconnected' | 'player_disconnected' | 'round_started' | 'turn_advanced' | 'accuse_mode_started' | 'vote_cast' | 'spy_guess_submitted' | 'round_summary' | 'round_ended' | 'game_finished' | 'scores_updated';
   data: any;
 }
 
@@ -35,10 +46,9 @@ export interface SocketEvents {
   // Client to Server
   join_game: (data: { gameId: string; playerName: string; playerId?: string; secret?: string; isHost?: boolean }) => void;
   start_round: () => void;
-  advance_turn: () => void;
-  accuse_player: (data: { accusedPlayerId: string }) => void;
-  vote: (data: { vote: boolean }) => void;
-  cancel_accusation: () => void;
+  next_turn: () => void;
+  submit_spy_guess: (data: { locationGuess: string }) => void;
+  submit_player_vote: (data: { accusedPlayerId: string }) => void;
   end_round: () => void;
   
   // Server to Client

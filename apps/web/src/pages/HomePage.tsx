@@ -5,6 +5,7 @@ import { QRCodeDisplay } from '../components/QRCodeDisplay';
 import { GameControls } from '../components/GameControls';
 import { VotingModal } from '../components/VotingModal';
 import { Plus, Users, Settings, Gamepad2, Eye, EyeOff, Clock } from 'lucide-react';
+import { debugLog, errorLog } from '../utils/debug';
 
 export function HomePage() {
   // Use the same host as the web app but port 4000 for the server
@@ -18,27 +19,27 @@ export function HomePage() {
   // Handle game updates
   useEffect(() => {
     if (gameUpdate) {
-      console.log('📡 HomePage received game update:', gameUpdate);
+      debugLog('📡 HomePage received game update:', gameUpdate);
       
       // Skip TV Host player_joined events - TV Host is not a real player
       if (gameUpdate.type === 'player_joined' && gameUpdate.data?.name === 'TV Host') {
-        console.log('⚠️ HomePage - Skipping TV Host player_joined event');
+        debugLog('⚠️ HomePage - Skipping TV Host player_joined event');
         return;
       }
       
       if (gameUpdate.type === 'round_started') {
-        console.log('🎮 HomePage - Game started!', gameUpdate.data);
+        debugLog('🎮 HomePage - Game started!', gameUpdate.data);
       }
       updateGameState(gameUpdate);
     }
   }, [gameUpdate, updateGameState]);
 
   const handleCreateGame = async () => {
-    console.log('🎮 HomePage - Create Game button clicked');
-    console.log('🌐 Server URL:', serverUrl);
+    debugLog('🎮 HomePage - Create Game button clicked');
+    debugLog('🌐 Server URL:', serverUrl);
     setIsCreatingGame(true);
     try {
-      console.log('📡 HomePage - Making API call to create game...');
+      debugLog('📡 HomePage - Making API call to create game...');
       const response = await fetch(`${serverUrl}/api/games`, {
         method: 'POST',
         headers: {
@@ -51,12 +52,12 @@ export function HomePage() {
       }
       
       const data = await response.json();
-      console.log('✅ HomePage - Game created successfully:', data);
+      debugLog('✅ HomePage - Game created successfully:', data);
       setCreatedGameId(data.gameId);
       
       // Auto-join as host
       const hostName = 'TV Host';
-      console.log('👤 HomePage - Auto-joining as host:', { gameId: data.gameId, playerName: hostName });
+      debugLog('👤 HomePage - Auto-joining as host:', { gameId: data.gameId, playerName: hostName });
       emit('join_game', {
         gameId: data.gameId,
         playerName: hostName,
@@ -64,7 +65,7 @@ export function HomePage() {
       } as any);
       
     } catch (error) {
-      console.error('Error creating game:', error);
+      errorLog('Error creating game:', error);
       alert('Failed to create game. Make sure the server is running on port 4000.');
     } finally {
       setIsCreatingGame(false);
@@ -95,8 +96,8 @@ export function HomePage() {
               const serverGameState = await response.json();
               setGame(serverGameState, playerId, secret);
             }
-          } catch (error) {
-            console.error('Failed to fetch game state:', error);
+            } catch (error) {
+            errorLog('Failed to fetch game state:', error);
           }
         };
         
@@ -370,7 +371,7 @@ export function HomePage() {
               gameState={gameState}
               currentPlayer={currentPlayer}
               onStartRound={() => {
-                console.log('🎮 HomePage - onStartRound called, emitting start_round event');
+                debugLog('🎮 HomePage - onStartRound called, emitting start_round event');
                 emit('start_round');
               }}
               onAdvanceTurn={() => emit('advance_turn')}

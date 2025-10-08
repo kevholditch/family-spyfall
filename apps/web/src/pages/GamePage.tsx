@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useSocket } from '../hooks/useSocket';
 import { useGameState } from '../hooks/useGameState';
 import { Eye, EyeOff, Users, Clock, ArrowLeft } from 'lucide-react';
+import { debugLog, debugError } from '../utils/debug';
+import { SPYFALL_LOCATIONS } from '../types';
 
 export function GamePage() {
   const { gameId } = useParams<{ gameId: string }>();
@@ -10,11 +12,12 @@ export function GamePage() {
   const { emit, gameUpdate, error, isConnected, roleAssignment } = useSocket(serverUrl);
   const { gameState, currentPlayer, setGame, updateGameState } = useGameState();
   const [hasRejoined, setHasRejoined] = useState(false);
+  const [countdown, setCountdown] = useState(60);
 
   // Handle game updates
   useEffect(() => {
     if (gameUpdate) {
-      console.log('📡 GamePage received game update:', gameUpdate);
+      debugLog('📡 GamePage received game update:', gameUpdate);
       updateGameState(gameUpdate);
     }
   }, [gameUpdate, updateGameState]);
@@ -22,9 +25,26 @@ export function GamePage() {
   // Handle role assignments
   useEffect(() => {
     if (roleAssignment) {
-      console.log('🎭 GamePage - Role assignment received:', roleAssignment);
+      debugLog('🎭 GamePage - Role assignment received:', roleAssignment);
     }
   }, [roleAssignment]);
+
+  // Countdown timer for round summary
+  useEffect(() => {
+    if (gameState?.status === 'round_summary') {
+      setCountdown(60);
+      const interval = setInterval(() => {
+        setCountdown(prev => {
+          if (prev <= 1) {
+            clearInterval(interval);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      return () => clearInterval(interval);
+    }
+  }, [gameState?.status]);
 
   // Auto-rejoin the game when the page loads (only once!)
   useEffect(() => {
@@ -32,7 +52,7 @@ export function GamePage() {
       const playerId = sessionStorage.getItem('playerId');
       const playerSecret = sessionStorage.getItem('playerSecret');
       
-      console.log('🔄 GamePage - Auto-rejoining game:', { gameId, playerId, hasSecret: !!playerSecret });
+      debugLog('🔄 GamePage - Auto-rejoining game:', { gameId, playerId, hasSecret: !!playerSecret });
       
       if (playerId && playerSecret) {
         emit('join_game', {
@@ -47,12 +67,12 @@ export function GamePage() {
         fetch(`${serverUrl}/api/games/${gameId}`)
           .then(res => res.json())
           .then(serverGameState => {
-            console.log('✅ GamePage - Fetched game state from API:', serverGameState);
+            debugLog('✅ GamePage - Fetched game state from API:', serverGameState);
             setGame(serverGameState, playerId, playerSecret);
           })
-          .catch(err => console.error('❌ GamePage - Failed to fetch game state:', err));
+          .catch(err => debugError('❌ GamePage - Failed to fetch game state:', err));
       } else {
-        console.error('❌ GamePage - No saved credentials, redirecting to join page');
+        debugError('❌ GamePage - No saved credentials, redirecting to join page');
         window.location.href = `/join/${gameId}`;
       }
     }
@@ -99,6 +119,21 @@ export function GamePage() {
     );
   }
 
+  const currentTurnPlayer = gameState.players[gameState.currentPlayerIndex];
+  const isMyTurn = currentPlayer?.id === currentTurnPlayer?.id;
+
+  const handleNextTurn = () => {
+    emit('next_turn');
+  };
+
+  const handleSpyGuess = (locationGuess: string) => {
+    emit('submit_spy_guess', { locationGuess });
+  };
+
+  const handlePlayerVote = (accusedPlayerId: string) => {
+    emit('submit_player_vote', { accusedPlayerId });
+  };
+
   // Game is active - show role-specific content
   return (
     <div className="min-h-screen bg-gray-900 text-white p-6">
@@ -120,8 +155,146 @@ export function GamePage() {
           </div>
         </div>
 
+        {/* Question Phase */}
+        {gameState.status === 'playing' && (
+          <div className="mb-8 bg-gray-800 rounded-xl p-6 shadow-xl">
+            <h2 className="text-2xl font-bold text-center mb-4">Question Round</h2>
+            <div className="text-center mb-6">
+              <p className="text-xl text-gray-300 mb-2">Current Turn:</p>
+              <p className="text-3xl font-bold text-yellow-400">{currentTurnPlayer?.name || 'Unknown'}</p>
+            </div>
+            {isMyTurn && (
+              <div className="text-center">
+                <p className="text-lg text-gray-300 mb-4">It's your turn! Ask your question, then click Next.</p>
+                <button
+                  onClick={handleNextTurn}
+                  className="px-8 py-4 bg-blue-600 text-white text-xl font-bold rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Next
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Round Summary */}
+        {gameState.status === 'round_summary' && gameState.roundResult && (
+          <div className="mb-8 bg-gray-800 rounded-xl p-8 shadow-xl">
+            <h2 className="text-3xl font-bold text-center mb-6 text-yellow-400">Round Results!</h2>
+            
+            {/* Result Summary */}
+            <div className="mb-6 space-y-4">
+              <div className={`p-4 rounded-lg ${gameState.roundResult.spyGuessedCorrectly ? 'bg-red-900/30 border border-red-500' : 'bg-gray-700'}`}>
+                <p className="text-lg">
+                  <strong>Spy's Guess:</strong> {gameState.roundResult.spyGuess || 'No guess'} 
+                  {gameState.roundResult.spyGuessedCorrectly && <span className="text-green-400 ml-2">✓ Correct! (+3 points)</span>}
+                  {!gameState.roundResult.spyGuessedCorrectly && gameState.roundResult.spyGuess && <span className="text-red-400 ml-2">✗ Wrong</span>}
+                </p>
+              </div>
+              
+              <div className={`p-4 rounded-lg ${gameState.roundResult.civiliansWon ? 'bg-green-900/30 border border-green-500' : 'bg-gray-700'}`}>
+                <p className="text-lg">
+                  <strong>Correct Location:</strong> {gameState.roundResult.correctLocation}
+                </p>
+                {gameState.roundResult.civiliansWon && (
+                  <p className="text-green-400 mt-2">✓ Civilians found the spy! (+1 point each to correct voters)</p>
+                )}
+              </div>
+            </div>
+
+            {/* Points Awarded */}
+            <div className="mb-6">
+              <h3 className="text-xl font-semibold mb-3">Points This Round:</h3>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                {gameState.players.map(player => {
+                  const pointsAwarded = gameState.roundResult?.pointsAwarded[player.id] || 0;
+                  return (
+                    <div 
+                      key={player.id} 
+                      className={`p-3 rounded-lg ${pointsAwarded > 0 ? 'bg-green-900/50 border-2 border-green-500' : 'bg-gray-700'} ${player.id === currentPlayer?.id ? 'ring-2 ring-blue-400' : ''}`}
+                    >
+                      <div className="font-semibold">{player.name}</div>
+                      <div className="text-2xl font-bold text-yellow-400">
+                        {pointsAwarded > 0 ? `+${pointsAwarded}` : '0'}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Countdown */}
+            <div className="text-center">
+              <p className="text-xl text-gray-300">
+                Next round starts in: <strong className="text-yellow-400 text-2xl">{countdown}s</strong>
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Accuse Mode */}
+        {gameState.status === 'accusing' && (
+          <div className="mb-8 bg-gray-800 rounded-xl p-6 shadow-xl">
+            <h2 className="text-2xl font-bold text-center mb-6 text-red-400">Accusation Phase!</h2>
+            
+            {roleAssignment.role === 'spy' ? (
+              // Spy: Guess the location
+              <div>
+                <p className="text-lg text-gray-300 mb-4 text-center">
+                  Guess the location to win 3 points!
+                </p>
+                {!gameState.accuseMode?.spyLocationGuess && (
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {SPYFALL_LOCATIONS.map(loc => (
+                      <button
+                        key={loc.name}
+                        onClick={() => handleSpyGuess(loc.name)}
+                        className="px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                      >
+                        {loc.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {gameState.accuseMode?.spyLocationGuess && (
+                  <p className="text-center text-green-400 text-xl">
+                    ✓ You've submitted your guess. Waiting for others...
+                  </p>
+                )}
+              </div>
+            ) : (
+              // Civilian: Vote for who they think is the spy
+              <div>
+                <p className="text-lg text-gray-300 mb-4 text-center">
+                  Vote for who you think is the spy!
+                </p>
+                {!gameState.accuseMode?.playerVotes[currentPlayer?.id || ''] && (
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {gameState.players
+                      .filter(p => p.id !== currentPlayer?.id)
+                      .map(player => (
+                        <button
+                          key={player.id}
+                          onClick={() => handlePlayerVote(player.id)}
+                          className="px-4 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
+                        >
+                          {player.name}
+                        </button>
+                      ))}
+                  </div>
+                )}
+                {gameState.accuseMode?.playerVotes[currentPlayer?.id || ''] && (
+                  <p className="text-center text-green-400 text-xl">
+                    ✓ You've cast your vote. Waiting for others...
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Role Display */}
-        <div className="bg-gray-800 rounded-xl p-8 shadow-xl text-center">
+        <div className="bg-gray-800 rounded-xl p-8 shadow-xl text-center mb-8">
           {roleAssignment.role === 'spy' ? (
             // Spy Screen
             <div>
@@ -132,16 +305,6 @@ export function GamePage() {
                   Your mission is to figure out the secret location without revealing that you're the spy.
                 </p>
               </div>
-              
-              <div className="bg-red-900/20 border border-red-500 rounded-lg p-6">
-                <h3 className="text-xl font-semibold text-red-400 mb-4">Spy Instructions:</h3>
-                <ul className="text-left text-gray-300 space-y-2">
-                  <li>• Listen carefully to other players' questions and answers</li>
-                  <li>• Ask vague questions that could apply to many locations</li>
-                  <li>• Try to figure out the location from context clues</li>
-                  <li>• Don't reveal that you don't know the location</li>
-                </ul>
-              </div>
             </div>
           ) : (
             // Civilian Screen
@@ -149,41 +312,27 @@ export function GamePage() {
               <div className="mb-6">
                 <Eye className="w-24 h-24 mx-auto mb-4 text-green-400" />
                 <h2 className="text-3xl font-bold text-green-400 mb-2">YOUR LOCATION</h2>
-                <p className="text-gray-300 text-lg">
-                  You know the secret location. Help others figure it out, but watch out for the spy!
-                </p>
               </div>
               
               <div className="bg-green-900/20 border border-green-500 rounded-lg p-8">
                 <h3 className="text-4xl font-bold text-green-400 mb-4">
                   {roleAssignment.location}
                 </h3>
-                <p className="text-gray-300">
-                  Ask questions that help others guess this location, but be careful not to be too obvious!
-                </p>
               </div>
             </div>
           )}
         </div>
 
-        {/* Game Info */}
+        {/* Player Scores */}
         <div className="mt-8 bg-gray-800 rounded-lg p-6">
-          <h3 className="text-xl font-semibold mb-4">Game Status</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
-            <div>
-              <div className="text-2xl font-bold text-blue-400">{gameState.players.length}</div>
-              <div className="text-gray-400">Players</div>
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-green-400">{gameState.status}</div>
-              <div className="text-gray-400">Status</div>
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-yellow-400">
-                {gameState.players[gameState.currentPlayerIndex]?.name || 'Unknown'}
+          <h3 className="text-xl font-semibold mb-4">Scores</h3>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {gameState.players.map(player => (
+              <div key={player.id} className={`p-4 rounded-lg ${player.id === currentPlayer?.id ? 'bg-blue-900/50 border-2 border-blue-500' : 'bg-gray-700'}`}>
+                <div className="font-semibold text-white">{player.name}</div>
+                <div className="text-2xl font-bold text-yellow-400">{player.score || 0}</div>
               </div>
-              <div className="text-gray-400">Current Turn</div>
-            </div>
+            ))}
           </div>
         </div>
 

@@ -44,7 +44,8 @@ export class GameManager {
       name: playerName,
       secret,
       isHost,
-      isConnected: true
+      isConnected: true,
+      score: 0
     };
 
     game.players.push(player);
@@ -94,7 +95,7 @@ export class GameManager {
     game.roundNumber++;
     game.status = 'playing';
     game.currentLocation = undefined;
-    game.accusation = undefined;
+    game.accuseMode = undefined;
 
     // Select random location
     const randomIndex = Math.floor(Math.random() * SPYFALL_LOCATIONS.length);
@@ -103,8 +104,9 @@ export class GameManager {
     // Select random spy
     const spyIndex = Math.floor(Math.random() * game.players.length);
 
-    // Assign roles
+    // Assign roles and reset hasAskedQuestion
     game.players.forEach((player, index) => {
+      player.hasAskedQuestion = false;
       if (index === spyIndex) {
         player.role = 'spy';
         player.location = undefined; // Spy doesn't know the location
@@ -120,66 +122,159 @@ export class GameManager {
     return true;
   }
 
-  advanceTurn(gameId: string): boolean {
+  nextTurn(gameId: string): boolean {
     const game = this.games.get(gameId);
     if (!game || game.status !== 'playing') return false;
 
-    // Find next connected player
+    // Mark current player as having asked a question
+    const currentPlayer = game.players[game.currentPlayerIndex];
+    if (currentPlayer) {
+      currentPlayer.hasAskedQuestion = true;
+    }
+
+    // Check if all players have asked a question
+    const allPlayersAsked = game.players.every(p => p.hasAskedQuestion);
+    
+    if (allPlayersAsked) {
+      // Transition to accuse mode
+      game.status = 'accusing';
+      game.accuseMode = {
+        playerVotes: {}
+      };
+      game.lastActivity = Date.now();
+      return true;
+    }
+
+    // Find next player who hasn't asked a question
     let attempts = 0;
     do {
       game.currentPlayerIndex = (game.currentPlayerIndex + 1) % game.players.length;
       attempts++;
-    } while (!game.players[game.currentPlayerIndex].isConnected && attempts < game.players.length);
+    } while (
+      (game.players[game.currentPlayerIndex].hasAskedQuestion || !game.players[game.currentPlayerIndex].isConnected) 
+      && attempts < game.players.length
+    );
 
     game.lastActivity = Date.now();
     return true;
   }
 
-  startAccusation(gameId: string, accusedPlayerId: string): boolean {
+  submitSpyGuess(gameId: string, playerId: string, locationGuess: string): boolean {
     const game = this.games.get(gameId);
-    if (!game || game.status !== 'playing') return false;
+    if (!game || game.status !== 'accusing' || !game.accuseMode) return false;
 
-    const accusedPlayer = game.players.find(p => p.id === accusedPlayerId);
-    if (!accusedPlayer) return false;
+    const player = game.players.find(p => p.id === playerId);
+    if (!player || player.role !== 'spy') return false;
 
-    game.status = 'voting';
-    game.accusation = {
-      accusedPlayerId,
-      votes: {}
-    };
-
-    game.lastActivity = Date.now();
-    return true;
-  }
-
-  castVote(gameId: string, voterId: string, vote: boolean): boolean {
-    const game = this.games.get(gameId);
-    if (!game || game.status !== 'voting' || !game.accusation) return false;
-
-    // Can't vote if you're the accused player
-    if (game.accusation.accusedPlayerId === voterId) return false;
-
-    game.accusation.votes[voterId] = vote;
+    game.accuseMode.spyLocationGuess = locationGuess;
     game.lastActivity = Date.now();
 
     // Check if voting is complete
-    const eligibleVoters = game.players.filter(p => p.id !== game.accusation!.accusedPlayerId);
-    if (Object.keys(game.accusation.votes).length >= eligibleVoters.length) {
-      this.finishVoting(game);
-    }
+    this.checkAccusePhaseComplete(game);
 
     return true;
   }
 
-  cancelAccusation(gameId: string): boolean {
+  submitPlayerVote(gameId: string, voterId: string, accusedPlayerId: string): boolean {
     const game = this.games.get(gameId);
-    if (!game || game.status !== 'voting') return false;
+    if (!game || game.status !== 'accusing' || !game.accuseMode) return false;
 
-    game.status = 'playing';
-    game.accusation = undefined;
+    const voter = game.players.find(p => p.id === voterId);
+    if (!voter || voter.role === 'spy') return false;
+
+    game.accuseMode.playerVotes[voterId] = accusedPlayerId;
     game.lastActivity = Date.now();
 
+    // Check if voting is complete
+    this.checkAccusePhaseComplete(game);
+
     return true;
+  }
+
+  private checkAccusePhaseComplete(game: GameState): void {
+    if (!game.accuseMode) return;
+
+    const spy = game.players.find(p => p.role === 'spy');
+    const civilians = game.players.filter(p => p.role === 'civilian');
+
+    // Check if spy has guessed and all civilians have voted
+    const spyHasGuessed = !!game.accuseMode.spyLocationGuess;
+    const allCiviliansVoted = civilians.every(c => !!game.accuseMode!.playerVotes[c.id]);
+
+    if (spyHasGuessed && allCiviliansVoted) {
+      this.processAccuseResults(game);
+    }
+  }
+
+  private processAccuseResults(game: GameState): void {
+    if (!game.accuseMode) return;
+
+    const spy = game.players.find(p => p.role === 'spy');
+    if (!spy) return;
+
+    // Check if spy guessed the location correctly
+    const spyWon = game.accuseMode.spyLocationGuess === game.currentLocation;
+
+    // Count votes for each player
+    const voteCounts: Record<string, number> = {};
+    Object.values(game.accuseMode.playerVotes).forEach(accusedId => {
+      voteCounts[accusedId] = (voteCounts[accusedId] || 0) + 1;
+    });
+
+    // Find player with most votes
+    let maxVotes = 0;
+    let mostAccusedId: string | null = null;
+    Object.entries(voteCounts).forEach(([playerId, count]) => {
+      if (count > maxVotes) {
+        maxVotes = count;
+        mostAccusedId = playerId;
+      }
+    });
+
+    const civilians = game.players.filter(p => p.role === 'civilian');
+    const majorityVotes = Math.ceil(civilians.length / 2);
+    const civiliansWon = mostAccusedId === spy.id && maxVotes >= majorityVotes;
+
+    // Track points awarded this round
+    const pointsAwarded: Record<string, number> = {};
+
+    // Award points
+    if (spyWon) {
+      spy.score += 3;
+      pointsAwarded[spy.id] = 3;
+    }
+    if (civiliansWon) {
+      civilians.forEach(c => {
+        if (game.accuseMode!.playerVotes[c.id] === spy.id) {
+          c.score += 1;
+          pointsAwarded[c.id] = 1;
+        }
+      });
+    }
+
+    game.lastActivity = Date.now();
+
+    // If no one won, start a new question round
+    if (!spyWon && !civiliansWon) {
+      // Reset for new question round
+      game.status = 'playing';
+      game.currentPlayerIndex = 0;
+      game.accuseMode = undefined;
+      game.roundResult = undefined;
+      game.players.forEach(p => {
+        p.hasAskedQuestion = false;
+      });
+    } else {
+      // Show round summary
+      game.status = 'round_summary';
+      game.roundResult = {
+        spyGuessedCorrectly: spyWon,
+        civiliansWon,
+        spyGuess: game.accuseMode.spyLocationGuess,
+        correctLocation: game.currentLocation || '',
+        pointsAwarded
+      };
+    }
   }
 
   endRound(gameId: string): boolean {
@@ -188,13 +283,14 @@ export class GameManager {
 
     game.status = 'waiting';
     game.currentLocation = undefined;
-    game.accusation = undefined;
+    game.accuseMode = undefined;
     game.currentPlayerIndex = 0;
 
-    // Clear roles
+    // Clear roles but keep scores
     game.players.forEach(player => {
       player.role = undefined;
       player.location = undefined;
+      player.hasAskedQuestion = false;
     });
 
     game.lastActivity = Date.now();
@@ -208,17 +304,18 @@ export class GameManager {
     return game.players[game.currentPlayerIndex] || null;
   }
 
-  getVotingResult(gameId: string): { isGuilty: boolean; votes: { guilty: number; innocent: number } } | null {
+  getAccuseResults(gameId: string): { spyGuess?: string; voteCounts: Record<string, number> } | null {
     const game = this.games.get(gameId);
-    if (!game || !game.accusation) return null;
+    if (!game || !game.accuseMode) return null;
 
-    const votes = game.accusation.votes;
-    const guilty = Object.values(votes).filter(v => v).length;
-    const innocent = Object.values(votes).filter(v => !v).length;
+    const voteCounts: Record<string, number> = {};
+    Object.values(game.accuseMode.playerVotes).forEach(accusedId => {
+      voteCounts[accusedId] = (voteCounts[accusedId] || 0) + 1;
+    });
 
     return {
-      isGuilty: guilty > innocent,
-      votes: { guilty, innocent }
+      spyGuess: game.accuseMode.spyLocationGuess,
+      voteCounts
     };
   }
 
@@ -248,25 +345,4 @@ export class GameManager {
     return result;
   }
 
-  private finishVoting(game: GameState): void {
-    if (!game.accusation) return;
-
-    const result = this.getVotingResult(game.id);
-    if (!result) return;
-
-    if (result.isGuilty) {
-      // Check if the accused is actually the spy
-      const accusedPlayer = game.players.find(p => p.id === game.accusation!.accusedPlayerId);
-      const isSpy = accusedPlayer?.role === 'spy';
-
-      if (isSpy) {
-        game.status = 'finished';
-      } else {
-        // Wrong accusation, spies win
-        game.status = 'finished';
-      }
-    }
-
-    game.lastActivity = Date.now();
-  }
 }
