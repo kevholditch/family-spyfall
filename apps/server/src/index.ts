@@ -392,6 +392,17 @@ io.on('connection', (socket) => {
       data: {}
     });
 
+    // Check if game transitioned back to playing (nobody won)
+    if (game.status === 'playing') {
+      io.to(currentGameId).emit('game_update', {
+        type: 'round_started',
+        data: {
+          roundNumber: game.roundNumber,
+          currentPlayerIndex: game.currentPlayerIndex
+        }
+      });
+    }
+
     // Check if results need to be sent
     if (game.status === 'round_summary') {
       // Broadcast round summary
@@ -457,6 +468,17 @@ io.on('connection', (socket) => {
       type: 'vote_cast',
       data: { voterId: currentPlayerId }
     });
+
+    // Check if game transitioned back to playing (nobody won)
+    if (game.status === 'playing') {
+      io.to(currentGameId).emit('game_update', {
+        type: 'round_started',
+        data: {
+          roundNumber: game.roundNumber,
+          currentPlayerIndex: game.currentPlayerIndex
+        }
+      });
+    }
 
     // Check if results need to be sent
     if (game.status === 'round_summary') {
