@@ -1,4 +1,4 @@
-import { Page, BrowserContext } from '@playwright/test';
+import { Page, BrowserContext, expect } from '@playwright/test';
 
 export interface RoleInfo {
   isSpy: boolean;
@@ -122,6 +122,43 @@ export class TestPlayer {
 
   async getRoundPoints(): Promise<number> {
     return this.getScore();
+  }
+
+  async verifySpyWinMessage(location: string): Promise<void> {
+    const spyWinMsg = await this.page.locator('text=Spy wins the round!').isVisible();
+    expect(spyWinMsg).toBe(true);
+    console.log('✅ Spy win message shown');
+    
+    const locationMsg = await this.page.locator(`text=Location: ${location}`).isVisible();
+    expect(locationMsg).toBe(true);
+    console.log(`✅ Location displayed: ${location}`);
+  }
+
+  async verifyCiviliansWinMessage(correctVoters: number, totalCivilians: number, location: string): Promise<void> {
+    // Check for the civilian win message
+    const winMessage = await this.page.getByText(/Civilians win the round/).isVisible();
+    expect(winMessage).toBe(true);
+    console.log(`✅ Civilian win message shown`);
+    
+    // Check that the voter ratio appears on the page (simplified check)
+    const voterRatio = `${correctVoters}/${totalCivilians}`;
+    const hasVoterRatio = await this.page.getByText(voterRatio).isVisible();
+    expect(hasVoterRatio).toBe(true);
+    console.log(`✅ Voter ratio shown: ${voterRatio}`);
+    
+    const locationMsg = await this.page.locator(`text=Location: ${location}`).isVisible();
+    expect(locationMsg).toBe(true);
+    console.log(`✅ Location displayed: ${location}`);
+  }
+
+  async verifyNoWinnerMessage(location: string): Promise<void> {
+    const noWinnerMsg = await this.page.locator('text=No winner this round!').isVisible();
+    expect(noWinnerMsg).toBe(true);
+    console.log('✅ No winner message shown');
+    
+    const locationMsg = await this.page.locator(`text=Location: ${location}`).isVisible();
+    expect(locationMsg).toBe(true);
+    console.log(`✅ Location displayed: ${location}`);
   }
 
   async close(): Promise<void> {

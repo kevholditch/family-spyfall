@@ -182,7 +182,33 @@ export function GamePage() {
           <div className="mb-8 bg-gray-800 rounded-xl p-8 shadow-xl">
             <h2 className="text-3xl font-bold text-center mb-6 text-yellow-400">Round Results!</h2>
             
-            {/* Result Summary */}
+            {/* Win/Loss Banner */}
+            <div className="mb-6">
+              {gameState.roundResult.spyGuessedCorrectly && (
+                <div className="p-6 rounded-lg bg-red-900/30 border border-red-500 text-center">
+                  <p className="text-2xl font-bold text-red-400 mb-2">Spy wins the round!</p>
+                  <p className="text-lg text-gray-300">Location: {gameState.roundResult.correctLocation}</p>
+                </div>
+              )}
+              
+              {!gameState.roundResult.spyGuessedCorrectly && gameState.roundResult.civiliansWon && (
+                <div className="p-6 rounded-lg bg-green-900/30 border border-green-500 text-center">
+                  <p className="text-2xl font-bold text-green-400 mb-2">
+                    Civilians win the round, {Object.values(gameState.roundResult.pointsAwarded).filter(p => p > 0).length}/{gameState.players.length - 1} civilians guessed correctly!
+                  </p>
+                  <p className="text-lg text-gray-300">Location: {gameState.roundResult.correctLocation}</p>
+                </div>
+              )}
+              
+              {!gameState.roundResult.spyGuessedCorrectly && !gameState.roundResult.civiliansWon && (
+                <div className="p-6 rounded-lg bg-gray-700 text-center">
+                  <p className="text-2xl font-bold text-gray-400 mb-2">No winner this round!</p>
+                  <p className="text-lg text-gray-300">Location: {gameState.roundResult.correctLocation}</p>
+                </div>
+              )}
+            </div>
+            
+            {/* Detailed Result Summary */}
             <div className="mb-6 space-y-4">
               <div className={`p-4 rounded-lg ${gameState.roundResult.spyGuessedCorrectly ? 'bg-red-900/30 border border-red-500' : 'bg-gray-700'}`}>
                 <p className="text-lg">
@@ -190,15 +216,6 @@ export function GamePage() {
                   {gameState.roundResult.spyGuessedCorrectly && <span className="text-green-400 ml-2">✓ Correct! (+3 points)</span>}
                   {!gameState.roundResult.spyGuessedCorrectly && gameState.roundResult.spyGuess && <span className="text-red-400 ml-2">✗ Wrong</span>}
                 </p>
-              </div>
-              
-              <div className={`p-4 rounded-lg ${gameState.roundResult.civiliansWon && !gameState.roundResult.spyGuessedCorrectly ? 'bg-green-900/30 border border-green-500' : 'bg-gray-700'}`}>
-                <p className="text-lg">
-                  <strong>Correct Location:</strong> {gameState.roundResult.correctLocation}
-                </p>
-                {gameState.roundResult.civiliansWon && !gameState.roundResult.spyGuessedCorrectly && (
-                  <p className="text-green-400 mt-2">✓ Civilians found the spy! (+1 point each to correct voters)</p>
-                )}
               </div>
             </div>
 

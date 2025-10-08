@@ -72,8 +72,10 @@ test.describe('Spyfall Winning Scenarios', () => {
       await playerA.waitForRoundSummary();
       console.log('✅ Round summary shown');
 
-      // Verify only correct voting civilians got points
       await host.page.waitForTimeout(500); // Wait for UI update
+      
+      // Verify civilian win message is displayed correctly
+      await playerA.verifyCiviliansWinMessage(2, 2, location);
       
       // Check spy got 0 points
       const spyInitialScore = await spy.player.getScore();
@@ -163,6 +165,9 @@ test.describe('Spyfall Winning Scenarios', () => {
 
       await host.page.waitForTimeout(500);
 
+      // Verify spy win message is displayed correctly
+      await playerA.verifySpyWinMessage(location);
+
       // Spy should have 3 points
       const spyScore = await spy.player.getScore();
       expect(spyScore).toBe(3);
@@ -250,10 +255,8 @@ test.describe('Spyfall Winning Scenarios', () => {
 
       await host.page.waitForTimeout(500);
 
-      // Verify UI does NOT show civilian win message when spy wins
-      const civilianWinMessage = await playerA.page.locator('text=Civilians found the spy!').isVisible();
-      expect(civilianWinMessage).toBe(false);
-      console.log('✅ Civilian win message not shown (correctly)');
+      // Verify spy win message is shown (not civilian win message)
+      await playerA.verifySpyWinMessage(location);
 
       // Only spy should have points (3 points)
       const spyScore = await spy.player.getScore();
