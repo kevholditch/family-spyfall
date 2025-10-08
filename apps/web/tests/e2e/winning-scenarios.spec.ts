@@ -250,6 +250,11 @@ test.describe('Spyfall Winning Scenarios', () => {
 
       await host.page.waitForTimeout(500);
 
+      // Verify UI does NOT show civilian win message when spy wins
+      const civilianWinMessage = await playerA.page.locator('text=Civilians found the spy!').isVisible();
+      expect(civilianWinMessage).toBe(false);
+      console.log('✅ Civilian win message not shown (correctly)');
+
       // Only spy should have points (3 points)
       const spyScore = await spy.player.getScore();
       expect(spyScore).toBe(3);

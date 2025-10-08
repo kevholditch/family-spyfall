@@ -192,11 +192,11 @@ export function GamePage() {
                 </p>
               </div>
               
-              <div className={`p-4 rounded-lg ${gameState.roundResult.civiliansWon ? 'bg-green-900/30 border border-green-500' : 'bg-gray-700'}`}>
+              <div className={`p-4 rounded-lg ${gameState.roundResult.civiliansWon && !gameState.roundResult.spyGuessedCorrectly ? 'bg-green-900/30 border border-green-500' : 'bg-gray-700'}`}>
                 <p className="text-lg">
                   <strong>Correct Location:</strong> {gameState.roundResult.correctLocation}
                 </p>
-                {gameState.roundResult.civiliansWon && (
+                {gameState.roundResult.civiliansWon && !gameState.roundResult.spyGuessedCorrectly && (
                   <p className="text-green-400 mt-2">✓ Civilians found the spy! (+1 point each to correct voters)</p>
                 )}
               </div>
