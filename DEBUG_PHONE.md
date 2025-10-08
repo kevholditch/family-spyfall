@@ -63,7 +63,12 @@ If your network uses a different range, you may need to update CORS in `apps/ser
 
 ## Testing Connection from Phone
 
-1. **Start the development servers:**
+1. **Start the development servers with debug logging:**
+   ```bash
+   pnpm dev:debug
+   ```
+   
+   Or with a `.env` file containing `DEBUG=true` and `VITE_DEBUG=true`:
    ```bash
    pnpm dev
    ```

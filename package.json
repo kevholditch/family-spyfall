@@ -5,6 +5,7 @@
   "private": true,
   "scripts": {
     "dev": "pnpm -C apps/server dev & pnpm -C apps/web dev",
+    "dev:debug": "DEBUG=true pnpm -C apps/server dev & VITE_DEBUG=true pnpm -C apps/web dev",
     "build": "pnpm -r build",
     "test": "pnpm -r test",
     "lint": "pnpm -r lint",
