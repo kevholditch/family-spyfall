@@ -150,6 +150,76 @@ export class TestHost {
     console.log('✅ Scoreboard order is correct');
   }
 
+  async waitForRoundSummary(): Promise<void> {
+    console.log('⏳ Waiting for round summary on TV display...');
+    await this.page.waitForSelector('[data-testid="tv-round-summary"]', { timeout: 10000 });
+    
+    // Wait for content to be populated (not empty)
+    await this.page.waitForFunction(() => {
+      const element = document.querySelector('[data-testid="tv-round-summary"]');
+      return element && element.textContent && element.textContent.trim().length > 0;
+    }, { timeout: 5000 });
+    
+    console.log('✅ Round summary visible on TV display');
+  }
+
+  async verifyRoundSummaryText(expectedText: string): Promise<void> {
+    console.log(`🔍 Verifying round summary contains: ${expectedText}`);
+    const summaryContainer = this.page.locator('[data-testid="tv-round-summary"]');
+    const text = await summaryContainer.textContent();
+    
+    if (!text?.includes(expectedText)) {
+      throw new Error(`Round summary does not contain "${expectedText}". Found: "${text}"`);
+    }
+    
+    console.log(`✅ Round summary contains: ${expectedText}`);
+  }
+
+  async verifyCiviliansWonSummary(spyName: string, correctVoters: string[]): Promise<void> {
+    console.log('🔍 Verifying civilians won summary on TV display...');
+    
+    await this.waitForRoundSummary();
+    
+    // Check for "Civilians won!" text
+    await this.verifyRoundSummaryText('Civilians won!');
+    
+    // Check for vote summary with spy name
+    const voteText = `${correctVoters.length}/`;
+    await this.verifyRoundSummaryText(voteText);
+    await this.verifyRoundSummaryText(`guessed the spy was ${spyName}`);
+    
+    // Check each voter is listed with +1
+    for (const voter of correctVoters) {
+      await this.verifyRoundSummaryText(`+1 ${voter}`);
+    }
+    
+    // Check for countdown text
+    await this.verifyRoundSummaryText('until next round');
+    
+    console.log('✅ Civilians won summary verified');
+  }
+
+  async verifySpyWonSummary(spyName: string, location: string): Promise<void> {
+    console.log('🔍 Verifying spy won summary on TV display...');
+    
+    await this.waitForRoundSummary();
+    
+    // Check for "Spy won!" text
+    await this.verifyRoundSummaryText('Spy won!');
+    
+    // Check for spy's correct guess message
+    await this.verifyRoundSummaryText(`The spy was ${spyName}`);
+    await this.verifyRoundSummaryText(`correctly guessed the location was ${location}`);
+    
+    // Check for spy points
+    await this.verifyRoundSummaryText(`+3 ${spyName}`);
+    
+    // Check for countdown text
+    await this.verifyRoundSummaryText('until next round');
+    
+    console.log('✅ Spy won summary verified');
+  }
+
   async close(): Promise<void> {
     await this.page.close();
     await this.context.close();

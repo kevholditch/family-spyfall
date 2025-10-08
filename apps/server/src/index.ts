@@ -412,7 +412,7 @@ io.on('connection', (socket) => {
         type: 'round_summary',
         data: {
           roundResult: game.roundResult,
-          players: game.players.map(p => ({ id: p.id, name: p.name, score: p.score }))
+          players: game.players.map(p => ({ id: p.id, name: p.name, score: p.score, role: p.role }))
         }
       });
 
@@ -489,7 +489,7 @@ io.on('connection', (socket) => {
         type: 'round_summary',
         data: {
           roundResult: game.roundResult,
-          players: game.players.map(p => ({ id: p.id, name: p.name, score: p.score }))
+          players: game.players.map(p => ({ id: p.id, name: p.name, score: p.score, role: p.role }))
         }
       });
 

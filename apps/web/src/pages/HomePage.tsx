@@ -4,6 +4,23 @@ import { useGameState } from '../hooks/useGameState';
 import { QRCodeDisplay } from '../components/QRCodeDisplay';
 import { debugLog, errorLog } from '../utils/debug';
 
+// Countdown hook for round summary
+function useRoundCountdown(isRoundSummary: boolean) {
+  const [countdown, setCountdown] = useState(50);
+
+  useEffect(() => {
+    if (isRoundSummary) {
+      setCountdown(50); // Reset to 50 when entering round summary
+      const interval = setInterval(() => {
+        setCountdown((prev) => Math.max(0, prev - 1));
+      }, 1000);
+      return () => clearInterval(interval);
+    }
+  }, [isRoundSummary]);
+
+  return countdown;
+}
+
 export function HomePage() {
   // Use the same host as the web app but port 4000 for the server
   const serverUrl = `${window.location.protocol}//${window.location.hostname}:4000`;
@@ -11,6 +28,9 @@ export function HomePage() {
   const { gameState, setGame, updateGameState } = useGameState();
   const [isCreatingGame, setIsCreatingGame] = useState(false);
   const [createdGameId, setCreatedGameId] = useState<string | null>(null);
+  
+  // Countdown timer for round summary
+  const countdown = useRoundCountdown(gameState?.status === 'round_summary');
 
   // Handle game updates
   useEffect(() => {
@@ -29,6 +49,12 @@ export function HomePage() {
         console.log('🎮 HomePage - Game started!', gameUpdate.data);
         debugLog('🎮 HomePage - Game started!', gameUpdate.data);
       }
+      
+      if (gameUpdate.type === 'round_summary') {
+        console.log('🎯 HomePage - Round summary received!', gameUpdate.data);
+        debugLog('🎯 HomePage - Round summary received!', gameUpdate.data);
+      }
+      
       updateGameState(gameUpdate);
     }
   }, [gameUpdate, updateGameState]);
@@ -425,34 +451,216 @@ export function HomePage() {
             }}
           ></div>
 
-          {/* Right Side - Game Status Information */}
-          <div 
-            style={{
-              backgroundColor: 'rgba(255, 255, 255, 0.1)',
-              borderRadius: '20px',
-              padding: '2rem',
-              minWidth: '300px',
-              border: '2px solid rgba(255, 140, 66, 0.3)',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'center',
-              gap: '1.5rem'
-            }}
-          >
+          {/* Right Side - Game Status Information or Round Summary */}
+          {gameState.status === 'round_summary' ? (
+            // Round Summary Display
             <div 
+              data-testid="tv-round-summary"
               style={{
-                fontSize: 'clamp(1.5rem, 3vw, 2rem)',
-                fontWeight: 'bold',
-                color: '#f5f5dc',
-                textAlign: 'center',
-                textShadow: '2px 2px 4px rgba(0, 0, 0, 0.3)'
+                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                borderRadius: '20px',
+                padding: '2rem',
+                minWidth: '300px',
+                border: '2px solid rgba(255, 140, 66, 0.3)',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                gap: '1.5rem'
               }}
             >
-              Game in progress
-            </div>
+              <div style={{ color: '#f5f5dc', textAlign: 'center', fontSize: '1.5rem' }}>
+                Round Summary
+              </div>
+              {(() => {
+                const roundResult = gameState.roundResult;
+                
+                if (!roundResult) {
+                  return (
+                    <div style={{ color: '#ff7f50', textAlign: 'center' }}>
+                      Waiting for round results...
+                    </div>
+                  );
+                }
 
-            {gameState.status === 'playing' && currentPlayerName && (
-              <>
+                // Use players from round result data if available, otherwise fall back to game state
+                const playersWithRoles = roundResult.players || actualPlayers;
+                const gamePlayers = playersWithRoles.filter(p => p.name !== 'TV Host');
+                const spy = gamePlayers.find(p => p.role === 'spy');
+                const civilians = gamePlayers.filter(p => p.role === 'civilian');
+                
+                if (roundResult.spyGuessedCorrectly && spy) {
+                  // Spy won
+                  return (
+                    <>
+                      <div 
+                        style={{
+                          fontSize: 'clamp(1.5rem, 3vw, 2.5rem)',
+                          fontWeight: 'bold',
+                          color: '#ff7f50',
+                          textAlign: 'center',
+                          textShadow: '2px 2px 4px rgba(0, 0, 0, 0.3)'
+                        }}
+                      >
+                        Spy won!
+                      </div>
+                      
+                      <div 
+                        style={{
+                          fontSize: 'clamp(1rem, 2vw, 1.3rem)',
+                          color: '#f5f5dc',
+                          textAlign: 'center'
+                        }}
+                      >
+                        The spy was {spy.name}, they correctly guessed the location was {roundResult.spyGuess}
+                      </div>
+
+                      <div 
+                        style={{
+                          fontSize: 'clamp(1.2rem, 2.5vw, 1.8rem)',
+                          fontWeight: 'bold',
+                          color: '#ffd700',
+                          textAlign: 'center'
+                        }}
+                      >
+                        +3 {spy.name}
+                      </div>
+
+                      <div 
+                        style={{
+                          fontSize: 'clamp(1rem, 2vw, 1.3rem)',
+                          color: '#f5f5dc',
+                          textAlign: 'center',
+                          marginTop: '1rem'
+                        }}
+                      >
+                        {countdown}s until next round
+                      </div>
+                    </>
+                  );
+                } else if (roundResult.civiliansWon && spy) {
+                  // Civilians won
+                  const correctVoters = civilians.filter(c => 
+                    gameState.accuseMode?.playerVotes[c.id] === spy.id
+                  );
+                  
+                  return (
+                    <>
+                      <div 
+                        style={{
+                          fontSize: 'clamp(1.5rem, 3vw, 2.5rem)',
+                          fontWeight: 'bold',
+                          color: '#ff7f50',
+                          textAlign: 'center',
+                          textShadow: '2px 2px 4px rgba(0, 0, 0, 0.3)'
+                        }}
+                      >
+                        Civilians won!
+                      </div>
+                      
+                      <div 
+                        style={{
+                          fontSize: 'clamp(1rem, 2vw, 1.3rem)',
+                          color: '#f5f5dc',
+                          textAlign: 'center'
+                        }}
+                      >
+                        {correctVoters.length}/{civilians.length} civilians guessed the spy was {spy.name}
+                      </div>
+
+                      <div 
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '0.5rem',
+                          alignItems: 'center'
+                        }}
+                      >
+                        {correctVoters.map(voter => (
+                          <div
+                            key={voter.id}
+                            style={{
+                              fontSize: 'clamp(1.1rem, 2.2vw, 1.5rem)',
+                              fontWeight: 'bold',
+                              color: '#ffd700'
+                            }}
+                          >
+                            +1 {voter.name}
+                          </div>
+                        ))}
+                      </div>
+
+                      <div 
+                        style={{
+                          fontSize: 'clamp(1rem, 2vw, 1.3rem)',
+                          color: '#f5f5dc',
+                          textAlign: 'center',
+                          marginTop: '1rem'
+                        }}
+                      >
+                        {countdown}s until next round
+                      </div>
+                    </>
+                  );
+                }
+                
+                return null;
+              })()}
+            </div>
+          ) : (
+            // Normal Game Status Display
+            <div 
+              style={{
+                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                borderRadius: '20px',
+                padding: '2rem',
+                minWidth: '300px',
+                border: '2px solid rgba(255, 140, 66, 0.3)',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                gap: '1.5rem'
+              }}
+            >
+              <div 
+                style={{
+                  fontSize: 'clamp(1.5rem, 3vw, 2rem)',
+                  fontWeight: 'bold',
+                  color: '#f5f5dc',
+                  textAlign: 'center',
+                  textShadow: '2px 2px 4px rgba(0, 0, 0, 0.3)'
+                }}
+              >
+                Game in progress
+              </div>
+
+              {gameState.status === 'playing' && currentPlayerName && (
+                <>
+                  <div 
+                    style={{
+                      fontSize: 'clamp(1.2rem, 2.5vw, 1.8rem)',
+                      fontWeight: 'bold',
+                      color: '#ff7f50', // Coral orange
+                      textAlign: 'center',
+                      textShadow: '1px 1px 3px rgba(0, 0, 0, 0.3)'
+                    }}
+                  >
+                    {currentPlayerName} is asking a question
+                  </div>
+                  <div 
+                    style={{
+                      fontSize: 'clamp(1.2rem, 2.5vw, 1.8rem)',
+                      fontWeight: 'bold',
+                      color: '#f5f5dc',
+                      textAlign: 'center',
+                      opacity: 0.9
+                    }}
+                  >
+                    {current} player{current !== 1 ? 's' : ''} left to ask questions
+                  </div>
+                </>
+              )}
+
+              {gameState.status === 'accusing' && (
                 <div 
                   style={{
                     fontSize: 'clamp(1.2rem, 2.5vw, 1.8rem)',
@@ -462,50 +670,11 @@ export function HomePage() {
                     textShadow: '1px 1px 3px rgba(0, 0, 0, 0.3)'
                   }}
                 >
-                  {currentPlayerName} is asking a question
+                  Voting in progress
                 </div>
-                <div 
-                  style={{
-                    fontSize: 'clamp(1.2rem, 2.5vw, 1.8rem)',
-                    fontWeight: 'bold',
-                    color: '#f5f5dc',
-                    textAlign: 'center',
-                    opacity: 0.9
-                  }}
-                >
-                  {current} player{current !== 1 ? 's' : ''} left to ask questions
-                </div>
-              </>
-            )}
-
-            {gameState.status === 'accusing' && (
-              <div 
-                style={{
-                  fontSize: 'clamp(1.2rem, 2.5vw, 1.8rem)',
-                  fontWeight: 'bold',
-                  color: '#ff7f50', // Coral orange
-                  textAlign: 'center',
-                  textShadow: '1px 1px 3px rgba(0, 0, 0, 0.3)'
-                }}
-              >
-                Voting in progress
-              </div>
-            )}
-
-            {gameState.status === 'round_summary' && (
-              <div 
-                style={{
-                  fontSize: 'clamp(1.2rem, 2.5vw, 1.8rem)',
-                  fontWeight: 'bold',
-                  color: '#ff7f50', // Coral orange
-                  textAlign: 'center',
-                  textShadow: '1px 1px 3px rgba(0, 0, 0, 0.3)'
-                }}
-              >
-                Round Summary
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Round indicator (subtle) */}

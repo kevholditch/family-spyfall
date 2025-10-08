@@ -178,5 +178,194 @@ test.describe('HomePage TV Display', () => {
       await setup.cleanup();
     }
   });
+
+  test('shows round summary when civilians win', async ({ browser }) => {
+    console.log('🚀 Starting test: HomePage shows civilians won round summary');
+    
+    const playerBuilder = new PlayerBuilder(browser);
+    const hostBuilder = new HostBuilder(browser);
+    const setup = new TestSetup(playerBuilder, hostBuilder);
+
+    try {
+      // Create host and game
+      const host = await setup.createHost();
+      await host.goToHome();
+      const gameId = await host.createGame();
+
+      // Create and join players
+      const playerA = await setup.createPlayer('Alice');
+      const playerB = await setup.createPlayer('Bob');
+      const playerC = await setup.createPlayer('Charlie');
+
+      await playerA.joinGame(gameId);
+      await playerB.joinGame(gameId);
+      await playerC.joinGame(gameId);
+
+      // Start the game
+      await host.startRound();
+      await host.waitForGameInProgress();
+
+      // Wait for roles
+      await playerA.waitForGamePage();
+      await playerB.waitForGamePage();
+      await playerC.waitForGamePage();
+
+      await playerA.waitForRole();
+      await playerB.waitForRole();
+      await playerC.waitForRole();
+
+      // Get role information
+      const roleA = await playerA.getRoleInfo();
+      const roleB = await playerB.getRoleInfo();
+      const roleC = await playerC.getRoleInfo();
+
+      // Progress through the round
+      await playerA.clickNext();
+      await playerB.clickNext();
+      await playerC.clickNext();
+
+      // Find the spy
+      let spy = playerA;
+      let spyName = 'Alice';
+      let location = '';
+      
+      if (roleB.isSpy) {
+        spy = playerB;
+        spyName = 'Bob';
+        location = roleA.location || roleC.location || '';
+      } else if (roleC.isSpy) {
+        spy = playerC;
+        spyName = 'Charlie';
+        location = roleA.location || roleB.location || '';
+      } else {
+        location = roleB.location || roleC.location || '';
+      }
+
+      // Spy guesses wrong location
+      await spy.waitForAccusationPhase();
+      const wrongLocation = location === 'Bank' ? 'Beach' : 'Bank';
+      await spy.guessLocation(wrongLocation);
+
+      // All civilians vote correctly for the spy
+      const players = [
+        { player: playerA, name: 'Alice', isSpy: roleA.isSpy },
+        { player: playerB, name: 'Bob', isSpy: roleB.isSpy },
+        { player: playerC, name: 'Charlie', isSpy: roleC.isSpy }
+      ];
+
+      const correctVoters: string[] = [];
+      for (const p of players) {
+        if (!p.isSpy) {
+          await p.player.waitForAccusationPhase();
+          await p.player.voteForPlayer(spyName);
+          correctVoters.push(p.name);
+        }
+      }
+
+      // Wait for round summary on player screen
+      await playerA.waitForRoundSummary();
+
+      // Verify round summary on TV display
+      await host.verifyCiviliansWonSummary(spyName, correctVoters);
+
+      console.log('🎉 Test completed successfully!');
+
+    } finally {
+      await setup.cleanup();
+    }
+  });
+
+  test('shows round summary when spy wins', async ({ browser }) => {
+    console.log('🚀 Starting test: HomePage shows spy won round summary');
+    
+    const playerBuilder = new PlayerBuilder(browser);
+    const hostBuilder = new HostBuilder(browser);
+    const setup = new TestSetup(playerBuilder, hostBuilder);
+
+    try {
+      // Create host and game
+      const host = await setup.createHost();
+      await host.goToHome();
+      const gameId = await host.createGame();
+
+      // Create and join players
+      const playerA = await setup.createPlayer('Alice');
+      const playerB = await setup.createPlayer('Bob');
+      const playerC = await setup.createPlayer('Charlie');
+
+      await playerA.joinGame(gameId);
+      await playerB.joinGame(gameId);
+      await playerC.joinGame(gameId);
+
+      // Start the game
+      await host.startRound();
+      await host.waitForGameInProgress();
+
+      // Wait for roles
+      await playerA.waitForGamePage();
+      await playerB.waitForGamePage();
+      await playerC.waitForGamePage();
+
+      await playerA.waitForRole();
+      await playerB.waitForRole();
+      await playerC.waitForRole();
+
+      // Get role information
+      const roleA = await playerA.getRoleInfo();
+      const roleB = await playerB.getRoleInfo();
+      const roleC = await playerC.getRoleInfo();
+
+      // Progress through the round
+      await playerA.clickNext();
+      await playerB.clickNext();
+      await playerC.clickNext();
+
+      // Find the spy and get the location
+      let spy = playerA;
+      let spyName = 'Alice';
+      let location = '';
+      
+      if (roleB.isSpy) {
+        spy = playerB;
+        spyName = 'Bob';
+        location = roleA.location || roleC.location || '';
+      } else if (roleC.isSpy) {
+        spy = playerC;
+        spyName = 'Charlie';
+        location = roleA.location || roleB.location || '';
+      } else {
+        location = roleB.location || roleC.location || '';
+      }
+
+      // Spy guesses CORRECT location
+      await spy.waitForAccusationPhase();
+      await spy.guessLocation(location);
+
+      // Civilians vote (doesn't matter since spy won)
+      const players = [
+        { player: playerA, name: 'Alice', isSpy: roleA.isSpy },
+        { player: playerB, name: 'Bob', isSpy: roleB.isSpy },
+        { player: playerC, name: 'Charlie', isSpy: roleC.isSpy }
+      ];
+
+      for (const p of players) {
+        if (!p.isSpy) {
+          await p.player.waitForAccusationPhase();
+          await p.player.voteForPlayer(spyName);
+        }
+      }
+
+      // Wait for round summary on player screen
+      await playerA.waitForRoundSummary();
+
+      // Verify round summary on TV display
+      await host.verifySpyWonSummary(spyName, location);
+
+      console.log('🎉 Test completed successfully!');
+
+    } finally {
+      await setup.cleanup();
+    }
+  });
 });
 
