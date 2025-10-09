@@ -646,8 +646,15 @@ setInterval(() => {
 const PORT = parseInt(process.env.SERVER_PORT || '4000');
 const HOST = process.env.HOST || '0.0.0.0'; // Bind to all interfaces for network access
 
-server.listen(PORT, HOST, () => {
-  console.log(`Spyfall server running on ${HOST}:${PORT}`);
-  console.log(`Web origin: ${process.env.WEB_ORIGIN || 'http://localhost:5173'}`);
-  console.log(`Access from network: http://YOUR_IP:${PORT}`);
-});
+export function startServer() {
+  server.listen(PORT, HOST, () => {
+    console.log(`Spyfall server running on ${HOST}:${PORT}`);
+    console.log(`Web origin: ${process.env.WEB_ORIGIN || 'http://localhost:5173'}`);
+    console.log(`Access from network: http://YOUR_IP:${PORT}`);
+  });
+}
+
+// Only start the server if this file is run directly
+if (import.meta.url === `file://${process.argv[1]}`) {
+  startServer();
+}

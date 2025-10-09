@@ -337,9 +337,10 @@ describe('GameManager', () => {
       const civilians = game?.players.filter(p => p.role === 'civilian');
       
       expect(spy).toBeTruthy();
-      expect(civilians.length).toBeGreaterThan(0);
+      expect(civilians).toBeTruthy();
+      expect(civilians?.length).toBeGreaterThan(0);
       
-      if (spy && civilians.length > 0) {
+      if (spy && civilians && civilians.length > 0) {
         // Civilian should be able to vote
         const result = gameManager.submitPlayerVote(gameId, civilians[0].id, spy.id);
         expect(result).toBe(true);
@@ -392,9 +393,21 @@ describe('GameManager', () => {
           const gameManager = new GameManager();
           const gameId = gameManager.createGame();
           
-          // Add players with valid names
+          // Ensure unique player names (case-insensitive) to avoid duplicate name rejections
+          const uniqueNames = new Set<string>();
+          const actualPlayerNames: string[] = [];
           for (let i = 0; i < playerCount; i++) {
-            const name = (playerNames[i] && playerNames[i].trim()) || `Player${i}`;
+            let name = (playerNames[i] && playerNames[i].trim()) || `Player${i}`;
+            // Ensure uniqueness (case-insensitive)
+            while (uniqueNames.has(name.toLowerCase())) {
+              name = `${name}${i}`;
+            }
+            uniqueNames.add(name.toLowerCase());
+            actualPlayerNames.push(name);
+          }
+          
+          // Add players with valid, unique names
+          for (const name of actualPlayerNames) {
             const result = gameManager.addPlayer(gameId, name);
             expect(result).toBeTruthy();
           }
