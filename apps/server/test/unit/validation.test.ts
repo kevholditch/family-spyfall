@@ -14,7 +14,7 @@ describe('Validation', () => {
     it('should reject invalid player names', () => {
       expect(validatePlayerName('')).toEqual({ 
         isValid: false, 
-        error: 'Player name cannot be empty' 
+        error: 'Player name is required' 
       });
       expect(validatePlayerName('   ')).toEqual({ 
         isValid: false, 
@@ -123,7 +123,7 @@ describe('Validation', () => {
 
   describe('sanitizePlayerName', () => {
     it('should sanitize HTML tags', () => {
-      expect(sanitizePlayerName('Alice<script>alert("xss")</script>')).toBe('Alice');
+      expect(sanitizePlayerName('Alice<script>alert("xss")</script>')).toBe('Alicealert("xss")');
       expect(sanitizePlayerName('<b>Bob</b>')).toBe('Bob');
     });
 

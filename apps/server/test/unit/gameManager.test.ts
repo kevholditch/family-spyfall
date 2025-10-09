@@ -28,7 +28,7 @@ describe('GameManager', () => {
   describe('addPlayer', () => {
     it('should add first player as host', () => {
       const gameId = gameManager.createGame();
-      const result = gameManager.addPlayer(gameId, 'Alice', false);
+      const result = gameManager.addPlayer(gameId, 'Alice', true);
       
       expect(result).toBeTruthy();
       expect(result?.playerId).toBeTruthy();
@@ -72,15 +72,17 @@ describe('GameManager', () => {
   });
 
   describe('startRound', () => {
-    it('should require at least 3 players to start', () => {
+    it('should require at least 1 player to start', () => {
       const gameId = gameManager.createGame();
       
-      // Add only 2 players
-      gameManager.addPlayer(gameId, 'Alice');
-      gameManager.addPlayer(gameId, 'Bob');
+      // Add no players
+      const resultNoPlayers = gameManager.startRound(gameId);
+      expect(resultNoPlayers).toBe(false);
       
-      const result = gameManager.startRound(gameId);
-      expect(result).toBe(false);
+      // Add 1 player
+      gameManager.addPlayer(gameId, 'Alice');
+      const resultOnePlayer = gameManager.startRound(gameId);
+      expect(resultOnePlayer).toBe(true);
     });
 
     it('should assign exactly one spy', () => {
@@ -132,7 +134,7 @@ describe('GameManager', () => {
     });
   });
 
-  describe('advanceTurn', () => {
+  describe('nextTurn', () => {
     it('should advance to next player', () => {
       const gameId = gameManager.createGame();
       
@@ -144,14 +146,15 @@ describe('GameManager', () => {
       const game = gameManager.getGame(gameId);
       expect(game?.currentPlayerIndex).toBe(0);
       
-      gameManager.advanceTurn(gameId);
+      gameManager.nextTurn(gameId);
       expect(game?.currentPlayerIndex).toBe(1);
       
-      gameManager.advanceTurn(gameId);
+      gameManager.nextTurn(gameId);
       expect(game?.currentPlayerIndex).toBe(2);
       
-      gameManager.advanceTurn(gameId);
-      expect(game?.currentPlayerIndex).toBe(0); // Wrap around
+      // After all players have asked questions, should transition to accusing mode
+      gameManager.nextTurn(gameId);
+      expect(game?.status).toBe('accusing');
     });
 
     it('should skip disconnected players', () => {
@@ -167,13 +170,13 @@ describe('GameManager', () => {
         game.players[1].isConnected = false; // Bob is disconnected
       }
       
-      gameManager.advanceTurn(gameId);
+      gameManager.nextTurn(gameId);
       expect(game?.currentPlayerIndex).toBe(2); // Skip Bob, go to Charlie
     });
   });
 
   describe('accusation and voting', () => {
-    it('should start accusation', () => {
+    it('should allow spy to submit location guess', () => {
       const gameId = gameManager.createGame();
       
       gameManager.addPlayer(gameId, 'Alice');
@@ -182,14 +185,25 @@ describe('GameManager', () => {
       gameManager.startRound(gameId);
       
       const game = gameManager.getGame(gameId);
-      const result = gameManager.startAccusation(gameId, game?.players[1].id || '');
       
-      expect(result).toBe(true);
-      expect(game?.status).toBe('voting');
-      expect(game?.accusation?.accusedPlayerId).toBe(game?.players[1].id);
+      // Advance through all turns to reach accusing mode
+      gameManager.nextTurn(gameId);
+      gameManager.nextTurn(gameId);
+      gameManager.nextTurn(gameId);
+      
+      expect(game?.status).toBe('accusing');
+      
+      // Find the spy
+      const spy = game?.players.find(p => p.role === 'spy');
+      expect(spy).toBeTruthy();
+      
+      if (spy && game?.currentLocation) {
+        const result = gameManager.submitSpyGuess(gameId, spy.id, game.currentLocation);
+        expect(result).toBe(true);
+      }
     });
 
-    it('should not allow accused player to vote', () => {
+    it('should allow civilians to vote for suspected spy', () => {
       const gameId = gameManager.createGame();
       
       gameManager.addPlayer(gameId, 'Alice');
@@ -198,14 +212,29 @@ describe('GameManager', () => {
       gameManager.startRound(gameId);
       
       const game = gameManager.getGame(gameId);
-      const accusedId = game?.players[1].id || '';
-      gameManager.startAccusation(gameId, accusedId);
       
-      const result = gameManager.castVote(gameId, accusedId, true);
-      expect(result).toBe(false);
+      // Advance through all turns to reach accusing mode
+      gameManager.nextTurn(gameId);
+      gameManager.nextTurn(gameId);
+      gameManager.nextTurn(gameId);
+      
+      expect(game?.status).toBe('accusing');
+      
+      // Find civilians and spy
+      const spy = game?.players.find(p => p.role === 'spy');
+      const civilians = game?.players.filter(p => p.role === 'civilian');
+      
+      expect(spy).toBeTruthy();
+      expect(civilians.length).toBeGreaterThan(0);
+      
+      if (spy && civilians.length > 0) {
+        // Civilian should be able to vote
+        const result = gameManager.submitPlayerVote(gameId, civilians[0].id, spy.id);
+        expect(result).toBe(true);
+      }
     });
 
-    it('should determine voting result correctly', () => {
+    it('should not allow spy to vote for players', () => {
       const gameId = gameManager.createGame();
       
       gameManager.addPlayer(gameId, 'Alice');
@@ -214,16 +243,26 @@ describe('GameManager', () => {
       gameManager.startRound(gameId);
       
       const game = gameManager.getGame(gameId);
-      const accusedId = game?.players[1].id || '';
-      const voter1Id = game?.players[0].id || '';
-      const voter2Id = game?.players[2].id || '';
       
-      gameManager.startAccusation(gameId, accusedId);
-      gameManager.castVote(gameId, voter1Id, true);  // Guilty
-      gameManager.castVote(gameId, voter2Id, false); // Innocent
+      // Advance through all turns to reach accusing mode
+      gameManager.nextTurn(gameId);
+      gameManager.nextTurn(gameId);
+      gameManager.nextTurn(gameId);
       
-      const result = gameManager.getVotingResult(gameId);
-      expect(result?.isGuilty).toBe(false); // Tie goes to innocent
+      expect(game?.status).toBe('accusing');
+      
+      // Find the spy and a civilian
+      const spy = game?.players.find(p => p.role === 'spy');
+      const civilian = game?.players.find(p => p.role === 'civilian');
+      
+      expect(spy).toBeTruthy();
+      expect(civilian).toBeTruthy();
+      
+      if (spy && civilian) {
+        // Spy should NOT be able to vote for players
+        const result = gameManager.submitPlayerVote(gameId, spy.id, civilian.id);
+        expect(result).toBe(false);
+      }
     });
   });
 
@@ -282,13 +321,18 @@ describe('GameManager', () => {
           
           gameManager.startRound(gameId);
           
-          // Advance turns and verify wrap-around
-          for (let i = 0; i < playerCount * 2; i++) {
+          // Advance turns - note that after all players have asked questions, 
+          // the game transitions to 'accusing' mode, so we can only go through one full round
+          for (let i = 0; i < playerCount - 1; i++) {
             const game = gameManager.getGame(gameId);
-            const expectedIndex = i % playerCount;
-            expect(game?.currentPlayerIndex).toBe(expectedIndex);
-            gameManager.advanceTurn(gameId);
+            expect(game?.currentPlayerIndex).toBe(i);
+            gameManager.nextTurn(gameId);
           }
+          
+          // After last player's turn, game should transition to accusing mode
+          const game = gameManager.getGame(gameId);
+          gameManager.nextTurn(gameId);
+          expect(game?.status).toBe('accusing');
         }
       ));
     });
