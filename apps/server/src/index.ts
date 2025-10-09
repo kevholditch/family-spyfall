@@ -654,7 +654,8 @@ export function startServer() {
   });
 }
 
-// Only start the server if this file is run directly
-if (import.meta.url === `file://${process.argv[1]}`) {
+// Only start the server if not in test environment
+// Tests use global setup to manage server lifecycle
+if (process.env.NODE_ENV !== 'test') {
   startServer();
 }
