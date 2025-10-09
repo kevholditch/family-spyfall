@@ -46,6 +46,11 @@ test.describe('HomePage TV Display', () => {
       await playerA.waitForRole();
       await playerB.waitForRole();
       await playerC.waitForRole();
+
+      // All players acknowledge roles
+      await playerA.acknowledgeRole();
+      await playerB.acknowledgeRole();
+      await playerC.acknowledgeRole();
       
       // Verify players left count shows all players (3 at start)
       await host.verifyPlayersLeft(3);
@@ -104,6 +109,11 @@ test.describe('HomePage TV Display', () => {
       const roleA = await playerA.getRoleInfo();
       const roleB = await playerB.getRoleInfo();
       const roleC = await playerC.getRoleInfo();
+
+      // All players acknowledge roles
+      await playerA.acknowledgeRole();
+      await playerB.acknowledgeRole();
+      await playerC.acknowledgeRole();
 
       // Progress through the round
       await playerA.clickNext();
@@ -219,6 +229,11 @@ test.describe('HomePage TV Display', () => {
       const roleB = await playerB.getRoleInfo();
       const roleC = await playerC.getRoleInfo();
 
+      // All players acknowledge roles
+      await playerA.acknowledgeRole();
+      await playerB.acknowledgeRole();
+      await playerC.acknowledgeRole();
+
       // Progress through the round
       await playerA.clickNext();
       await playerB.clickNext();
@@ -314,6 +329,11 @@ test.describe('HomePage TV Display', () => {
       const roleA = await playerA.getRoleInfo();
       const roleB = await playerB.getRoleInfo();
       const roleC = await playerC.getRoleInfo();
+
+      // All players acknowledge roles
+      await playerA.acknowledgeRole();
+      await playerB.acknowledgeRole();
+      await playerC.acknowledgeRole();
 
       // Progress through the round
       await playerA.clickNext();

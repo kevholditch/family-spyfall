@@ -61,6 +61,18 @@ export class TestHost {
     console.log('✅ Round started!');
   }
 
+  async startNextRound(): Promise<void> {
+    console.log('⏳ Waiting for Start Next Round button...');
+    await this.page.waitForSelector('button:has-text("Start Next Round")', { timeout: 5000 });
+    
+    console.log('🖱️  Clicking Start Next Round button...');
+    await this.page.click('button:has-text("Start Next Round")');
+    
+    console.log('⏳ Waiting for next round to start...');
+    await this.page.waitForTimeout(2000); // Give time for the round to start
+    console.log('✅ Next round started!');
+  }
+
   getGameId(): string | null {
     return this.gameId;
   }

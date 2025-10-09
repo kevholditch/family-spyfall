@@ -69,7 +69,7 @@ export function sanitizePlayerName(name: string): string {
   return name
     .trim()
     .replace(/<[^>]*>/g, '') // Remove HTML tags
-    .replace(/[<>\"'&]/g, '') // Remove potentially dangerous characters
+    .replace(/[<>"'&]/g, '') // Remove potentially dangerous characters
     .substring(0, 20); // Limit length
 }
 

@@ -49,6 +49,11 @@ test.describe('Spyfall Round Continuation', () => {
       const playerBRoleInfo = await playerB.getRoleInfo();
       const playerCRoleInfo = await playerC.getRoleInfo();
 
+      // All players acknowledge roles
+      await playerA.acknowledgeRole();
+      await playerB.acknowledgeRole();
+      await playerC.acknowledgeRole();
+
       const players = [
         { player: playerA, ...playerARoleInfo },
         { player: playerB, ...playerBRoleInfo },

@@ -42,6 +42,13 @@ export class TestPlayer {
     ]);
   }
 
+  async acknowledgeRole(): Promise<void> {
+    const ackButton = this.page.locator('button:has-text("I Understand")');
+    await ackButton.waitFor({ state: 'visible', timeout: 5000 });
+    await ackButton.click();
+    console.log(`✅ [${this.name}] acknowledged role`);
+  }
+
   async getRoleInfo(): Promise<RoleInfo> {
     console.log(`🔍 [${this.name}] Getting role info...`);
     

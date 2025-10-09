@@ -71,7 +71,7 @@ export function HomePage() {
           playerId: savedPlayerId,
           secret: savedPlayerSecret,
           isHost: true
-        } as any);
+        });
         
         // Only fetch game state if we don't already have it
         if (!gameState) {
@@ -162,7 +162,7 @@ export function HomePage() {
         gameId: data.gameId,
         playerName: hostName,
         isHost: true
-      } as any);
+      });
       
     } catch (error) {
       errorLog('Error creating game:', error);

@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
-import { GameState, Player, GameUpdate } from '../types';
+import { GameState, GameUpdate } from '../types';
 import { debugLog, debugError } from '../utils/debug';
 
 export function useGameState() {
@@ -21,7 +21,7 @@ export function useGameState() {
       });
 
       switch (update.type) {
-        case 'player_joined':
+        case 'player_joined': {
           debugLog('🔍 useGameState - Player joined data structure:', {
             updateData: update.data,
             updateDataType: typeof update.data,
@@ -66,6 +66,7 @@ export function useGameState() {
             players: newState.players.map(p => ({ name: p.name, id: p.id, isConnected: p.isConnected }))
           });
           return newState;
+        }
 
         case 'player_left':
         case 'player_disconnected':
@@ -91,12 +92,31 @@ export function useGameState() {
             lastActivity: Date.now()
           };
 
+        case 'informing_players':
+          return {
+            ...prev,
+            status: 'informing_players',
+            roundNumber: update.data.roundNumber,
+            lastActivity: Date.now()
+          };
+
         case 'round_started':
           return {
             ...prev,
             status: 'playing',
             roundNumber: update.data.roundNumber,
             currentPlayerIndex: update.data.currentPlayerIndex,
+            lastActivity: Date.now()
+          };
+
+        case 'player_acknowledged':
+          return {
+            ...prev,
+            players: prev.players.map(p =>
+              p.id === update.data.playerId
+                ? { ...p, hasAcknowledgedRole: true }
+                : p
+            ),
             lastActivity: Date.now()
           };
 
@@ -157,7 +177,7 @@ export function useGameState() {
             status: 'round_summary',
             roundResult: update.data.roundResult,
             players: prev.players.map(p => {
-              const updated = update.data.players?.find((up: any) => up.id === p.id);
+              const updated = update.data.players?.find((up: { id: string; score: number }) => up.id === p.id);
               return updated ? { ...p, score: updated.score } : p;
             }),
             lastActivity: Date.now()
@@ -168,7 +188,7 @@ export function useGameState() {
             ...prev,
             status: update.data.status || prev.status,
             players: prev.players.map(p => {
-              const updated = update.data.players?.find((up: any) => up.id === p.id);
+              const updated = update.data.players?.find((up: { id: string; score: number }) => up.id === p.id);
               return updated ? { ...p, score: updated.score } : p;
             }),
             lastActivity: Date.now()

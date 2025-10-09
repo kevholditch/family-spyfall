@@ -50,6 +50,11 @@ test.describe('Spyfall Winning Scenarios', () => {
       console.log(`🕵️  Spy is: ${spy.player.name}`);
       console.log(`🗺️  Location is: ${location}`);
 
+      // All players acknowledge roles
+      await playerA.acknowledgeRole();
+      await playerB.acknowledgeRole();
+      await playerC.acknowledgeRole();
+
       // All players ask questions
       await players[0].player.clickNext();
       await players[1].player.clickNext();
@@ -144,6 +149,11 @@ test.describe('Spyfall Winning Scenarios', () => {
       console.log(`🕵️  Spy is: ${spy.player.name}`);
       console.log(`🗺️  Location is: ${location}`);
 
+      // All players acknowledge roles
+      await playerA.acknowledgeRole();
+      await playerB.acknowledgeRole();
+      await playerC.acknowledgeRole();
+
       // All players ask questions
       await players[0].player.clickNext();
       await players[1].player.clickNext();
@@ -233,6 +243,11 @@ test.describe('Spyfall Winning Scenarios', () => {
       const location = civilians[0].location!;
 
       console.log(`🕵️  Spy is: ${spy.player.name}`);
+
+      // All players acknowledge roles
+      await playerA.acknowledgeRole();
+      await playerB.acknowledgeRole();
+      await playerC.acknowledgeRole();
 
       // All players ask questions
       await players[0].player.clickNext();
@@ -325,6 +340,11 @@ test.describe('Spyfall Winning Scenarios', () => {
       console.log(`🕵️  Round 1 Spy: ${spy.player.name}`);
       console.log(`🗺️  Round 1 Location: ${location}`);
 
+      // All players acknowledge roles
+      await playerA.acknowledgeRole();
+      await playerB.acknowledgeRole();
+      await playerC.acknowledgeRole();
+
       // Play round - spy wins
       await players[0].player.clickNext();
       await players[1].player.clickNext();
@@ -339,19 +359,20 @@ test.describe('Spyfall Winning Scenarios', () => {
       await playerA.waitForRoundSummary();
       console.log('✅ Round 1 summary shown');
 
-      // Wait for auto-restart (3 seconds timeout for tests)
-      await host.page.waitForTimeout(4000);
-
-      // Wait for new round to start
-      await playerA.waitForRole();
-      await playerB.waitForRole();
-      await playerC.waitForRole();
+      // Host manually starts round 2 using the "Start Next Round" button
+      console.log('🎮 Host starting round 2...');
+      await host.startNextRound();
       console.log('✅ Round 2 started');
 
       // Get new roles
       const newPlayerARoleInfo = await playerA.getRoleInfo();
       const newPlayerBRoleInfo = await playerB.getRoleInfo();
       const newPlayerCRoleInfo = await playerC.getRoleInfo();
+
+      // All players acknowledge roles for round 2
+      await playerA.acknowledgeRole();
+      await playerB.acknowledgeRole();
+      await playerC.acknowledgeRole();
 
       const newPlayers = [
         { player: playerA, name: 'player a', ...newPlayerARoleInfo },

@@ -45,7 +45,19 @@ test.describe('Spyfall Game Logic', () => {
       await playerC.waitForRole();
       console.log('✅ All players received roles');
 
-      // Collect role information from all players
+      // Players acknowledge their roles
+      console.log('🎯 Players acknowledging their roles...');
+      await playerA.acknowledgeRole();
+      await playerB.acknowledgeRole();
+      await playerC.acknowledgeRole();
+      console.log('✅ All players acknowledged');
+
+      // Wait for question round to start
+      console.log('⏳ Waiting for question round to start...');
+      await playerA.page.waitForSelector('text=Question Round', { timeout: 5000 });
+      console.log('✅ Question round started');
+
+      // Collect role information from all players (need to get from the role display that's still visible during playing)
       console.log('🔍 Collecting role information from all players...');
       const playerARoleInfo = await playerA.getRoleInfo();
       const playerBRoleInfo = await playerB.getRoleInfo();

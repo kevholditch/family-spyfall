@@ -50,14 +50,14 @@ export function JoinPage() {
       updateGameState(gameUpdate);
       
       // If game starts and we've joined, redirect to game page
-      if (gameUpdate.type === 'round_started') {
+      if (gameUpdate.type === 'informing_players' || gameUpdate.type === 'round_started') {
         // Check both hasJoined state AND sessionStorage (more reliable)
         const storedPlayerId = sessionStorage.getItem('playerId');
         const storedGameId = sessionStorage.getItem('gameId');
         const hasStoredCredentials = storedPlayerId && storedPlayerId !== 'undefined' && 
                                      storedGameId && storedGameId !== 'undefined';
         
-        addDebugMsg(`🎮 round_started! hasJoined=${hasJoined}, hasCreds=${hasStoredCredentials}`);
+        addDebugMsg(`🎮 ${gameUpdate.type}! hasJoined=${hasJoined}, hasCreds=${hasStoredCredentials}`);
         
         if (hasJoined || hasStoredCredentials) {
           addDebugMsg('✅ Redirecting to game page...');
@@ -74,11 +74,11 @@ export function JoinPage() {
 
   // Handle game state changes (like when game starts) - fallback redirect
   useEffect(() => {
-    if (gameState && gameState.status === 'playing') {
+    if (gameState && (gameState.status === 'informing_players' || gameState.status === 'playing')) {
       const storedPlayerId = sessionStorage.getItem('playerId');
       const hasStoredCredentials = storedPlayerId && storedPlayerId !== 'undefined';
       
-      debugLog('🎮 JoinPage - Game status changed to playing:', {
+      debugLog('🎮 JoinPage - Game status changed to:', gameState.status, {
         hasJoined,
         hasStoredCredentials
       });

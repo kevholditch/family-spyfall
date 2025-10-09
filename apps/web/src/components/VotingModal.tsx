@@ -28,7 +28,7 @@ export function VotingModal({
 
   const eligibleVoters = gameState.players.filter(p => p.id !== accusedPlayer.id);
   const votes = gameState.accusation.votes;
-  const hasPlayerVoted = currentPlayer && votes.hasOwnProperty(currentPlayer.id);
+  const hasPlayerVoted = currentPlayer && Object.prototype.hasOwnProperty.call(votes, currentPlayer.id);
 
   const handleVote = (vote: boolean) => {
     onVote(vote);

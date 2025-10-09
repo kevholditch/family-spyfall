@@ -85,6 +85,30 @@ describe('GameManager', () => {
       expect(resultOnePlayer).toBe(true);
     });
 
+    it('should set status to informing_players when round starts', () => {
+      const gameId = gameManager.createGame();
+      gameManager.addPlayer(gameId, 'Alice');
+      gameManager.addPlayer(gameId, 'Bob');
+      
+      gameManager.startRound(gameId);
+      const game = gameManager.getGame(gameId);
+      
+      expect(game?.status).toBe('informing_players');
+    });
+
+    it('should reset hasAcknowledgedRole for all players when round starts', () => {
+      const gameId = gameManager.createGame();
+      gameManager.addPlayer(gameId, 'Alice');
+      gameManager.addPlayer(gameId, 'Bob');
+      
+      gameManager.startRound(gameId);
+      const game = gameManager.getGame(gameId);
+      
+      game?.players.forEach(player => {
+        expect(player.hasAcknowledgedRole).toBe(false);
+      });
+    });
+
     it('should assign exactly one spy', () => {
       const gameId = gameManager.createGame();
       
@@ -134,14 +158,87 @@ describe('GameManager', () => {
     });
   });
 
+  describe('acknowledgeRoleInfo', () => {
+    it('should mark player as acknowledged when they acknowledge', () => {
+      const gameId = gameManager.createGame();
+      const alice = gameManager.addPlayer(gameId, 'Alice');
+      gameManager.addPlayer(gameId, 'Bob');
+      
+      gameManager.startRound(gameId);
+      const game = gameManager.getGame(gameId);
+      
+      expect(game?.players[0].hasAcknowledgedRole).toBe(false);
+      
+      if (alice) {
+        gameManager.acknowledgeRoleInfo(gameId, alice.playerId);
+      }
+      
+      expect(game?.players[0].hasAcknowledgedRole).toBe(true);
+    });
+
+    it('should transition to playing when all players acknowledge', () => {
+      const gameId = gameManager.createGame();
+      const alice = gameManager.addPlayer(gameId, 'Alice');
+      const bob = gameManager.addPlayer(gameId, 'Bob');
+      const charlie = gameManager.addPlayer(gameId, 'Charlie');
+      
+      gameManager.startRound(gameId);
+      const game = gameManager.getGame(gameId);
+      
+      expect(game?.status).toBe('informing_players');
+      
+      // First player acknowledges - still informing
+      if (alice) {
+        gameManager.acknowledgeRoleInfo(gameId, alice.playerId);
+      }
+      expect(game?.status).toBe('informing_players');
+      
+      // Second player acknowledges - still informing
+      if (bob) {
+        gameManager.acknowledgeRoleInfo(gameId, bob.playerId);
+      }
+      expect(game?.status).toBe('informing_players');
+      
+      // Third player acknowledges - now playing
+      if (charlie) {
+        gameManager.acknowledgeRoleInfo(gameId, charlie.playerId);
+      }
+      expect(game?.status).toBe('playing');
+    });
+
+    it('should not acknowledge if game is not in informing_players state', () => {
+      const gameId = gameManager.createGame();
+      const alice = gameManager.addPlayer(gameId, 'Alice');
+      
+      // Game is in waiting state
+      const result = alice ? gameManager.acknowledgeRoleInfo(gameId, alice.playerId) : false;
+      expect(result).toBe(false);
+    });
+
+    it('should not acknowledge if player does not exist', () => {
+      const gameId = gameManager.createGame();
+      gameManager.addPlayer(gameId, 'Alice');
+      
+      gameManager.startRound(gameId);
+      
+      const result = gameManager.acknowledgeRoleInfo(gameId, 'invalid-player-id');
+      expect(result).toBe(false);
+    });
+  });
+
   describe('nextTurn', () => {
     it('should advance to next player', () => {
       const gameId = gameManager.createGame();
       
-      gameManager.addPlayer(gameId, 'Alice');
-      gameManager.addPlayer(gameId, 'Bob');
-      gameManager.addPlayer(gameId, 'Charlie');
+      const alice = gameManager.addPlayer(gameId, 'Alice');
+      const bob = gameManager.addPlayer(gameId, 'Bob');
+      const charlie = gameManager.addPlayer(gameId, 'Charlie');
       gameManager.startRound(gameId);
+      
+      // Acknowledge all players to transition to playing
+      if (alice) gameManager.acknowledgeRoleInfo(gameId, alice.playerId);
+      if (bob) gameManager.acknowledgeRoleInfo(gameId, bob.playerId);
+      if (charlie) gameManager.acknowledgeRoleInfo(gameId, charlie.playerId);
       
       const game = gameManager.getGame(gameId);
       expect(game?.currentPlayerIndex).toBe(0);
@@ -160,10 +257,15 @@ describe('GameManager', () => {
     it('should skip disconnected players', () => {
       const gameId = gameManager.createGame();
       
-      gameManager.addPlayer(gameId, 'Alice');
-      gameManager.addPlayer(gameId, 'Bob');
-      gameManager.addPlayer(gameId, 'Charlie');
+      const alice = gameManager.addPlayer(gameId, 'Alice');
+      const bob = gameManager.addPlayer(gameId, 'Bob');
+      const charlie = gameManager.addPlayer(gameId, 'Charlie');
       gameManager.startRound(gameId);
+      
+      // Acknowledge all players to transition to playing
+      if (alice) gameManager.acknowledgeRoleInfo(gameId, alice.playerId);
+      if (bob) gameManager.acknowledgeRoleInfo(gameId, bob.playerId);
+      if (charlie) gameManager.acknowledgeRoleInfo(gameId, charlie.playerId);
       
       const game = gameManager.getGame(gameId);
       if (game) {
@@ -179,10 +281,15 @@ describe('GameManager', () => {
     it('should allow spy to submit location guess', () => {
       const gameId = gameManager.createGame();
       
-      gameManager.addPlayer(gameId, 'Alice');
-      gameManager.addPlayer(gameId, 'Bob');
-      gameManager.addPlayer(gameId, 'Charlie');
+      const alice = gameManager.addPlayer(gameId, 'Alice');
+      const bob = gameManager.addPlayer(gameId, 'Bob');
+      const charlie = gameManager.addPlayer(gameId, 'Charlie');
       gameManager.startRound(gameId);
+      
+      // Acknowledge all players to transition to playing
+      if (alice) gameManager.acknowledgeRoleInfo(gameId, alice.playerId);
+      if (bob) gameManager.acknowledgeRoleInfo(gameId, bob.playerId);
+      if (charlie) gameManager.acknowledgeRoleInfo(gameId, charlie.playerId);
       
       const game = gameManager.getGame(gameId);
       
@@ -206,10 +313,15 @@ describe('GameManager', () => {
     it('should allow civilians to vote for suspected spy', () => {
       const gameId = gameManager.createGame();
       
-      gameManager.addPlayer(gameId, 'Alice');
-      gameManager.addPlayer(gameId, 'Bob');
-      gameManager.addPlayer(gameId, 'Charlie');
+      const alice = gameManager.addPlayer(gameId, 'Alice');
+      const bob = gameManager.addPlayer(gameId, 'Bob');
+      const charlie = gameManager.addPlayer(gameId, 'Charlie');
       gameManager.startRound(gameId);
+      
+      // Acknowledge all players to transition to playing
+      if (alice) gameManager.acknowledgeRoleInfo(gameId, alice.playerId);
+      if (bob) gameManager.acknowledgeRoleInfo(gameId, bob.playerId);
+      if (charlie) gameManager.acknowledgeRoleInfo(gameId, charlie.playerId);
       
       const game = gameManager.getGame(gameId);
       
@@ -237,10 +349,15 @@ describe('GameManager', () => {
     it('should not allow spy to vote for players', () => {
       const gameId = gameManager.createGame();
       
-      gameManager.addPlayer(gameId, 'Alice');
-      gameManager.addPlayer(gameId, 'Bob');
-      gameManager.addPlayer(gameId, 'Charlie');
+      const alice = gameManager.addPlayer(gameId, 'Alice');
+      const bob = gameManager.addPlayer(gameId, 'Bob');
+      const charlie = gameManager.addPlayer(gameId, 'Charlie');
       gameManager.startRound(gameId);
+      
+      // Acknowledge all players to transition to playing
+      if (alice) gameManager.acknowledgeRoleInfo(gameId, alice.playerId);
+      if (bob) gameManager.acknowledgeRoleInfo(gameId, bob.playerId);
+      if (charlie) gameManager.acknowledgeRoleInfo(gameId, charlie.playerId);
       
       const game = gameManager.getGame(gameId);
       
@@ -270,14 +387,15 @@ describe('GameManager', () => {
     it('should maintain game invariants', () => {
       fc.assert(fc.property(
         fc.integer({ min: 3, max: 12 }),
-        fc.array(fc.string({ minLength: 1, maxLength: 20 }), { minLength: 3, maxLength: 12 }),
+        fc.array(fc.stringOf(fc.char().filter(c => c.trim() !== ''), { minLength: 1, maxLength: 20 }), { minLength: 3, maxLength: 12 }),
         (playerCount, playerNames) => {
           const gameManager = new GameManager();
           const gameId = gameManager.createGame();
           
-          // Add players
+          // Add players with valid names
           for (let i = 0; i < playerCount; i++) {
-            const result = gameManager.addPlayer(gameId, playerNames[i] || `Player${i}`);
+            const name = (playerNames[i] && playerNames[i].trim()) || `Player${i}`;
+            const result = gameManager.addPlayer(gameId, name);
             expect(result).toBeTruthy();
           }
           
@@ -288,7 +406,7 @@ describe('GameManager', () => {
           const game = gameManager.getGame(gameId);
           expect(game).toBeTruthy();
           expect(game?.players).toHaveLength(playerCount);
-          expect(game?.status).toBe('playing');
+          expect(game?.status).toBe('informing_players');
           
           // Exactly one spy
           const spies = game?.players.filter(p => p.role === 'spy');
@@ -315,11 +433,20 @@ describe('GameManager', () => {
           const gameId = gameManager.createGame();
           
           // Add players
+          const playerIds: string[] = [];
           for (let i = 0; i < playerCount; i++) {
-            gameManager.addPlayer(gameId, `Player${i}`);
+            const result = gameManager.addPlayer(gameId, `Player${i}`);
+            if (result) {
+              playerIds.push(result.playerId);
+            }
           }
           
           gameManager.startRound(gameId);
+          
+          // Acknowledge all players to transition to playing
+          playerIds.forEach(playerId => {
+            gameManager.acknowledgeRoleInfo(gameId, playerId);
+          });
           
           // Advance turns - note that after all players have asked questions, 
           // the game transitions to 'accusing' mode, so we can only go through one full round
@@ -341,11 +468,17 @@ describe('GameManager', () => {
   describe('Round Summary Calculation', () => {
     it('should correctly calculate when all civilians vote for spy and spy guesses wrong', () => {
       const gameId = gameManager.createGame();
-      gameManager.addPlayer(gameId, 'Alice', true);
-      gameManager.addPlayer(gameId, 'Bob');
-      gameManager.addPlayer(gameId, 'Charlie');
+      const alice = gameManager.addPlayer(gameId, 'Alice', true);
+      const bob = gameManager.addPlayer(gameId, 'Bob');
+      const charlie = gameManager.addPlayer(gameId, 'Charlie');
       
       gameManager.startRound(gameId);
+      
+      // Acknowledge all players to transition to playing
+      if (alice) gameManager.acknowledgeRoleInfo(gameId, alice.playerId);
+      if (bob) gameManager.acknowledgeRoleInfo(gameId, bob.playerId);
+      if (charlie) gameManager.acknowledgeRoleInfo(gameId, charlie.playerId);
+      
       const game = gameManager.getGame(gameId)!;
       
       // Complete question round
@@ -391,13 +524,21 @@ describe('GameManager', () => {
     it('should correctly calculate when minority of civilians vote for spy and spy guesses wrong', () => {
       const gameId = gameManager.createGame();
       // Add 5 players (4 civilians, 1 spy) to test minority scenario
-      gameManager.addPlayer(gameId, 'Alice', true);
-      gameManager.addPlayer(gameId, 'Bob');
-      gameManager.addPlayer(gameId, 'Charlie');
-      gameManager.addPlayer(gameId, 'Dave');
-      gameManager.addPlayer(gameId, 'Eve');
+      const alice = gameManager.addPlayer(gameId, 'Alice', true);
+      const bob = gameManager.addPlayer(gameId, 'Bob');
+      const charlie = gameManager.addPlayer(gameId, 'Charlie');
+      const dave = gameManager.addPlayer(gameId, 'Dave');
+      const eve = gameManager.addPlayer(gameId, 'Eve');
       
       gameManager.startRound(gameId);
+      
+      // Acknowledge all players to transition to playing
+      if (alice) gameManager.acknowledgeRoleInfo(gameId, alice.playerId);
+      if (bob) gameManager.acknowledgeRoleInfo(gameId, bob.playerId);
+      if (charlie) gameManager.acknowledgeRoleInfo(gameId, charlie.playerId);
+      if (dave) gameManager.acknowledgeRoleInfo(gameId, dave.playerId);
+      if (eve) gameManager.acknowledgeRoleInfo(gameId, eve.playerId);
+      
       const game = gameManager.getGame(gameId)!;
       
       // Complete question round
@@ -429,11 +570,17 @@ describe('GameManager', () => {
 
     it('should correctly calculate when spy guesses correct location', () => {
       const gameId = gameManager.createGame();
-      gameManager.addPlayer(gameId, 'Alice', true);
-      gameManager.addPlayer(gameId, 'Bob');
-      gameManager.addPlayer(gameId, 'Charlie');
+      const alice = gameManager.addPlayer(gameId, 'Alice', true);
+      const bob = gameManager.addPlayer(gameId, 'Bob');
+      const charlie = gameManager.addPlayer(gameId, 'Charlie');
       
       gameManager.startRound(gameId);
+      
+      // Acknowledge all players to transition to playing
+      if (alice) gameManager.acknowledgeRoleInfo(gameId, alice.playerId);
+      if (bob) gameManager.acknowledgeRoleInfo(gameId, bob.playerId);
+      if (charlie) gameManager.acknowledgeRoleInfo(gameId, charlie.playerId);
+      
       const game = gameManager.getGame(gameId)!;
       
       // Complete question round
@@ -473,12 +620,19 @@ describe('GameManager', () => {
     it('should correctly calculate when majority of civilians vote for spy', () => {
       const gameId = gameManager.createGame();
       // Add 4 players to test majority (3 civilians, 1 spy)
-      gameManager.addPlayer(gameId, 'Alice', true);
-      gameManager.addPlayer(gameId, 'Bob');
-      gameManager.addPlayer(gameId, 'Charlie');
-      gameManager.addPlayer(gameId, 'Dave');
+      const alice = gameManager.addPlayer(gameId, 'Alice', true);
+      const bob = gameManager.addPlayer(gameId, 'Bob');
+      const charlie = gameManager.addPlayer(gameId, 'Charlie');
+      const dave = gameManager.addPlayer(gameId, 'Dave');
       
       gameManager.startRound(gameId);
+      
+      // Acknowledge all players to transition to playing
+      if (alice) gameManager.acknowledgeRoleInfo(gameId, alice.playerId);
+      if (bob) gameManager.acknowledgeRoleInfo(gameId, bob.playerId);
+      if (charlie) gameManager.acknowledgeRoleInfo(gameId, charlie.playerId);
+      if (dave) gameManager.acknowledgeRoleInfo(gameId, dave.playerId);
+      
       const game = gameManager.getGame(gameId)!;
       
       // Complete question round

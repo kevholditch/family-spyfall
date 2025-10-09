@@ -127,6 +127,17 @@ describe('Socket.IO Integration Tests', () => {
       client3.emit('join_game', { gameId, playerName: 'Charlie' });
     });
 
+    it('should start round and enter informing_players state', (done) => {
+      client1.on('game_update', (update) => {
+        if (update.type === 'informing_players') {
+          expect(update.data.roundNumber).toBe(1);
+          done();
+        }
+      });
+
+      client1.emit('start_round');
+    });
+
     it('should start round and assign roles', (done) => {
       let roleAssignments = 0;
       
@@ -157,6 +168,23 @@ describe('Socket.IO Integration Tests', () => {
       client1.emit('start_round');
     });
 
+    it('should transition to playing after all players acknowledge', (done) => {
+      client1.on('game_update', (update) => {
+        if (update.type === 'round_started') {
+          done();
+        }
+      });
+
+      client1.emit('start_round');
+      
+      setTimeout(() => {
+        // All three players acknowledge
+        client1.emit('acknowledge_role_info');
+        client2.emit('acknowledge_role_info');
+        client3.emit('acknowledge_role_info');
+      }, 100);
+    });
+
     it('should advance turns correctly', (done) => {
       client1.emit('start_round');
       
@@ -174,7 +202,6 @@ describe('Socket.IO Integration Tests', () => {
 
     it('should handle accusations and voting', (done) => {
       let accusationStarted = false;
-      let voteCast = false;
       
       client1.emit('start_round');
       
@@ -183,7 +210,6 @@ describe('Socket.IO Integration Tests', () => {
           if (update.type === 'accusation_started') {
             accusationStarted = true;
           } else if (update.type === 'vote_cast' && accusationStarted) {
-            voteCast = true;
             done();
           }
         });
@@ -275,6 +301,7 @@ describe('Socket.IO Integration Tests', () => {
 
 // Helper to extend expect with custom matcher
 declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace jest {
     interface Matchers<R> {
       toBeOneOf(expected: any[]): R;

@@ -93,7 +93,7 @@ export class GameManager {
     // Reset game state
     game.currentPlayerIndex = 0;
     game.roundNumber++;
-    game.status = 'playing';
+    game.status = 'informing_players';
     game.currentLocation = undefined;
     game.accuseMode = undefined;
 
@@ -104,9 +104,10 @@ export class GameManager {
     // Select random spy
     const spyIndex = Math.floor(Math.random() * game.players.length);
 
-    // Assign roles and reset hasAskedQuestion
+    // Assign roles and reset hasAskedQuestion and hasAcknowledgedRole
     game.players.forEach((player, index) => {
       player.hasAskedQuestion = false;
+      player.hasAcknowledgedRole = false;
       if (index === spyIndex) {
         player.role = 'spy';
         player.location = undefined; // Spy doesn't know the location
@@ -118,6 +119,29 @@ export class GameManager {
 
     game.currentLocation = selectedLocation;
     game.lastActivity = Date.now();
+
+    return true;
+  }
+
+  acknowledgeRoleInfo(gameId: string, playerId: string): boolean {
+    const game = this.games.get(gameId);
+    if (!game || game.status !== 'informing_players') return false;
+
+    const player = game.players.find(p => p.id === playerId);
+    if (!player) return false;
+
+    // Mark player as having acknowledged their role
+    player.hasAcknowledgedRole = true;
+    game.lastActivity = Date.now();
+
+    // Check if all players have acknowledged
+    const allAcknowledged = game.players.every(p => p.hasAcknowledgedRole);
+    
+    if (allAcknowledged) {
+      // Transition to playing state
+      game.status = 'playing';
+      game.lastActivity = Date.now();
+    }
 
     return true;
   }
@@ -194,7 +218,6 @@ export class GameManager {
   private checkAccusePhaseComplete(game: GameState): void {
     if (!game.accuseMode) return;
 
-    const spy = game.players.find(p => p.role === 'spy');
     const civilians = game.players.filter(p => p.role === 'civilian');
 
     // Check if spy has guessed and all civilians have voted
@@ -258,13 +281,14 @@ export class GameManager {
 
     // If no one won, start a new question round
     if (!spyWon && !civiliansWon) {
-      // Reset for new question round
+      // Reset for new question round - don't show roles again, just continue
       game.status = 'playing';
       game.currentPlayerIndex = 0;
       game.accuseMode = undefined;
       game.roundResult = undefined;
       game.players.forEach(p => {
         p.hasAskedQuestion = false;
+        // Keep hasAcknowledgedRole as true - players already saw their roles
       });
     } else {
       // Show round summary with computed display data
@@ -299,6 +323,7 @@ export class GameManager {
       player.role = undefined;
       player.location = undefined;
       player.hasAskedQuestion = false;
+      player.hasAcknowledgedRole = false;
     });
 
     game.lastActivity = Date.now();

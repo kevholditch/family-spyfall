@@ -13,12 +13,18 @@ export function GamePage() {
   const { gameState, currentPlayer, setGame, updateGameState } = useGameState();
   const [hasRejoined, setHasRejoined] = useState(false);
   const [countdown, setCountdown] = useState(60);
+  const [hasAcknowledged, setHasAcknowledged] = useState(false);
 
   // Handle game updates
   useEffect(() => {
     if (gameUpdate) {
       debugLog('📡 GamePage received game update:', gameUpdate);
       updateGameState(gameUpdate);
+      
+      // Reset acknowledgment when informing_players starts
+      if (gameUpdate.type === 'informing_players') {
+        setHasAcknowledged(false);
+      }
     }
   }, [gameUpdate, updateGameState]);
 
@@ -141,7 +147,7 @@ export function GamePage() {
           <p className="text-gray-400">The host will start the game when ready</p>
           {process.env.NODE_ENV === 'development' && (
             <div className="mt-4 text-xs text-gray-500">
-              <p>Debug: gameState={!!gameState ? '✓' : '✗'}, roleAssignment={!!roleAssignment ? '✓' : '✗'}</p>
+              <p>Debug: gameState={gameState ? '✓' : '✗'}, roleAssignment={roleAssignment ? '✓' : '✗'}</p>
             </div>
           )}
         </div>
@@ -151,6 +157,11 @@ export function GamePage() {
 
   const currentTurnPlayer = gameState.players[gameState.currentPlayerIndex];
   const isMyTurn = currentPlayer?.id === currentTurnPlayer?.id;
+
+  const handleAcknowledgeRole = () => {
+    emit('acknowledge_role_info');
+    setHasAcknowledged(true);
+  };
 
   const handleNextTurn = () => {
     emit('next_turn');
@@ -184,6 +195,49 @@ export function GamePage() {
             </div>
           </div>
         </div>
+
+        {/* Informing Players Phase */}
+        {gameState.status === 'informing_players' && (
+          <div className="mb-8 bg-gray-800 rounded-xl p-8 shadow-xl text-center">
+            {!hasAcknowledged ? (
+              // Show role info with acknowledge button
+              <div>
+                {roleAssignment.role === 'spy' ? (
+                  <div>
+                    <EyeOff className="w-24 h-24 mx-auto mb-4 text-red-400" />
+                    <h2 className="text-4xl font-bold text-red-400 mb-4">YOU ARE THE SPY!</h2>
+                    <p className="text-gray-300 text-lg mb-8">
+                      Your mission is to figure out the secret location without revealing that you're the spy.
+                    </p>
+                  </div>
+                ) : (
+                  <div>
+                    <Eye className="w-24 h-24 mx-auto mb-4 text-green-400" />
+                    <h2 className="text-3xl font-bold text-green-400 mb-4">YOUR LOCATION</h2>
+                    <div className="bg-green-900/20 border border-green-500 rounded-lg p-8 mb-8">
+                      <h3 className="text-4xl font-bold text-green-400">
+                        {roleAssignment.location}
+                      </h3>
+                    </div>
+                  </div>
+                )}
+                <button
+                  onClick={handleAcknowledgeRole}
+                  className="px-12 py-4 bg-blue-600 text-white text-xl font-bold rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  I Understand
+                </button>
+              </div>
+            ) : (
+              // Show waiting message after acknowledgment
+              <div>
+                <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500 mx-auto mb-6"></div>
+                <h2 className="text-2xl font-bold text-white mb-2">Waiting for other players...</h2>
+                <p className="text-gray-400">Everyone needs to confirm they've seen their role before the round starts</p>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Question Phase */}
         {gameState.status === 'playing' && (
@@ -339,36 +393,6 @@ export function GamePage() {
             )}
           </div>
         )}
-
-        {/* Role Display */}
-        <div className="bg-gray-800 rounded-xl p-8 shadow-xl text-center mb-8">
-          {roleAssignment.role === 'spy' ? (
-            // Spy Screen
-            <div>
-              <div className="mb-6">
-                <EyeOff className="w-24 h-24 mx-auto mb-4 text-red-400" />
-                <h2 className="text-3xl font-bold text-red-400 mb-2">YOU ARE THE SPY!</h2>
-                <p className="text-gray-300 text-lg">
-                  Your mission is to figure out the secret location without revealing that you're the spy.
-                </p>
-              </div>
-            </div>
-          ) : (
-            // Civilian Screen
-            <div>
-              <div className="mb-6">
-                <Eye className="w-24 h-24 mx-auto mb-4 text-green-400" />
-                <h2 className="text-3xl font-bold text-green-400 mb-2">YOUR LOCATION</h2>
-              </div>
-              
-              <div className="bg-green-900/20 border border-green-500 rounded-lg p-8">
-                <h3 className="text-4xl font-bold text-green-400 mb-4">
-                  {roleAssignment.location}
-                </h3>
-              </div>
-            </div>
-          )}
-        </div>
 
         {/* Player Scores */}
         <div className="mt-8 bg-gray-800 rounded-lg p-6">

@@ -9,8 +9,6 @@ interface PlayerListProps {
 }
 
 export function PlayerList({ players, currentPlayerIndex, className = '' }: PlayerListProps) {
-  const currentPlayer = players[currentPlayerIndex];
-
   return (
     <div className={`bg-white rounded-lg shadow-md p-4 ${className}`}>
       <h3 className="text-lg font-semibold mb-4 flex items-center">

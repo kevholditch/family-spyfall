@@ -6,8 +6,6 @@ import helmet from 'helmet';
 import dotenv from 'dotenv';
 import { v4 as uuidv4 } from 'uuid';
 import { GameManager } from './game/GameManager';
-import { SocketEvents } from './types';
-import { joinRateLimiter, accusationRateLimiter } from './utils/rateLimiter';
 import { validatePlayerName, validateGameId, validatePlayerId, validateSecret, sanitizePlayerName } from './utils/validation';
 import { debugLog, debugError, infoLog, errorLog } from './utils/debug';
 

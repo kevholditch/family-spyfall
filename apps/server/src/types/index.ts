@@ -8,6 +8,7 @@ export interface Player {
   location?: string;
   score: number;
   hasAskedQuestion?: boolean;
+  hasAcknowledgedRole?: boolean;
 }
 
 export interface RoundResult {
@@ -29,7 +30,7 @@ export interface GameState {
   players: Player[];
   currentPlayerIndex: number;
   roundNumber: number;
-  status: 'waiting' | 'playing' | 'accusing' | 'round_summary' | 'finished';
+  status: 'waiting' | 'informing_players' | 'playing' | 'accusing' | 'round_summary' | 'finished';
   currentLocation?: string;
   accuseMode?: {
     spyLocationGuess?: string;
@@ -53,7 +54,7 @@ export interface JoinResponse {
 }
 
 export interface GameUpdate {
-  type: 'player_joined' | 'player_left' | 'round_started' | 'turn_advanced' | 'accuse_mode_started' | 'vote_cast' | 'spy_guess_submitted' | 'round_summary' | 'round_ended' | 'game_finished' | 'scores_updated';
+  type: 'player_joined' | 'player_left' | 'round_started' | 'informing_players' | 'player_acknowledged' | 'turn_advanced' | 'accuse_mode_started' | 'vote_cast' | 'spy_guess_submitted' | 'round_summary' | 'round_ended' | 'game_finished' | 'scores_updated';
   data: any;
 }
 
@@ -61,6 +62,7 @@ export interface SocketEvents {
   // Client to Server
   join_game: (data: { gameId: string; playerName: string; playerId?: string; secret?: string; isHost?: boolean }) => void;
   start_round: () => void;
+  acknowledge_role_info: () => void;
   next_turn: () => void;
   submit_spy_guess: (data: { locationGuess: string }) => void;
   submit_player_vote: (data: { accusedPlayerId: string }) => void;
