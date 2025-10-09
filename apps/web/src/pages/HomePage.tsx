@@ -28,9 +28,72 @@ export function HomePage() {
   const { gameState, setGame, updateGameState } = useGameState();
   const [isCreatingGame, setIsCreatingGame] = useState(false);
   const [createdGameId, setCreatedGameId] = useState<string | null>(null);
+  const [hasReconnected, setHasReconnected] = useState(false);
   
   // Countdown timer for round summary
   const countdown = useRoundCountdown(gameState?.status === 'round_summary');
+
+  // Auto-reconnect if we have saved host credentials
+  useEffect(() => {
+    debugLog('🔄 HomePage - Reconnection check:', { 
+      isConnected, 
+      hasReconnected,
+      hasGameState: !!gameState 
+    });
+    
+    if (isConnected && !hasReconnected && !gameState) {
+      const savedPlayerId = sessionStorage.getItem('tv_playerId');
+      const savedPlayerSecret = sessionStorage.getItem('tv_playerSecret');
+      const savedGameId = sessionStorage.getItem('tv_gameId');
+      
+      debugLog('🔄 HomePage - Saved credentials:', { 
+        hasPlayerId: !!savedPlayerId,
+        hasSecret: !!savedPlayerSecret,
+        gameId: savedGameId
+      });
+      
+      if (savedPlayerId && savedPlayerSecret && savedGameId) {
+        debugLog('🔄 HomePage - Auto-reconnecting as TV Host...');
+        
+        // Reconnect to the game
+        emit('join_game', {
+          gameId: savedGameId,
+          playerName: 'TV Host',
+          playerId: savedPlayerId,
+          secret: savedPlayerSecret,
+          isHost: true
+        } as any);
+        
+        // Fetch the current game state
+        const fetchGameState = async () => {
+          try {
+            debugLog('📡 HomePage - Fetching game state for reconnection...');
+            const response = await fetch(`${serverUrl}/api/games/${savedGameId}`);
+            if (response.ok) {
+              const serverGameState = await response.json();
+              debugLog('✅ HomePage - Fetched game state:', serverGameState);
+              setGame(serverGameState, savedPlayerId, savedPlayerSecret);
+            } else {
+              errorLog('❌ HomePage - Failed to fetch game state:', response.status);
+              // Clear invalid credentials
+              sessionStorage.removeItem('tv_playerId');
+              sessionStorage.removeItem('tv_playerSecret');
+              sessionStorage.removeItem('tv_gameId');
+            }
+          } catch (error) {
+            errorLog('❌ HomePage - Error fetching game state:', error);
+            // Clear invalid credentials
+            sessionStorage.removeItem('tv_playerId');
+            sessionStorage.removeItem('tv_playerSecret');
+            sessionStorage.removeItem('tv_gameId');
+          }
+        };
+        
+        fetchGameState();
+        setHasReconnected(true);
+      }
+    }
+  }, [isConnected, hasReconnected, gameState, emit, serverUrl, setGame]);
 
   // Handle game updates
   useEffect(() => {
@@ -107,7 +170,7 @@ export function HomePage() {
       
       const { id: playerId, secret } = gameUpdate.data;
       
-      // Store credentials for reconnection
+      // Store credentials for reconnection (using sessionStorage so it doesn't persist across tabs)
       sessionStorage.setItem('tv_playerId', playerId);
       sessionStorage.setItem('tv_playerSecret', secret);
       sessionStorage.setItem('tv_gameId', createdGameId || '');
