@@ -45,8 +45,8 @@ jobs:
     - name: Lint code
       run: pnpm lint
       
-    - name: Run server unit tests
-      run: pnpm -C apps/server test run test/unit
+    - name: Run server tests
+      run: make test-server
       
     - name: Build applications
       run: pnpm build
@@ -92,7 +92,7 @@ jobs:
       working-directory: apps/web
       
     - name: Run E2E tests
-      run: pnpm e2e --project=chromium
+      run: make test-web
       env:
         CI: true
       
