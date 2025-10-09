@@ -33,6 +33,14 @@ export function HomePage() {
   // Countdown timer for round summary
   const countdown = useRoundCountdown(gameState?.status === 'round_summary');
 
+  // Reset reconnection flag when socket disconnects
+  useEffect(() => {
+    if (!isConnected) {
+      debugLog('🔌 HomePage - Socket disconnected, resetting reconnection flag');
+      setHasReconnected(false);
+    }
+  }, [isConnected]);
+
   // Auto-reconnect if we have saved host credentials
   useEffect(() => {
     debugLog('🔄 HomePage - Reconnection check:', { 
@@ -41,7 +49,7 @@ export function HomePage() {
       hasGameState: !!gameState 
     });
     
-    if (isConnected && !hasReconnected && !gameState) {
+    if (isConnected && !hasReconnected) {
       const savedPlayerId = sessionStorage.getItem('tv_playerId');
       const savedPlayerSecret = sessionStorage.getItem('tv_playerSecret');
       const savedGameId = sessionStorage.getItem('tv_gameId');
@@ -49,7 +57,8 @@ export function HomePage() {
       debugLog('🔄 HomePage - Saved credentials:', { 
         hasPlayerId: !!savedPlayerId,
         hasSecret: !!savedPlayerSecret,
-        gameId: savedGameId
+        gameId: savedGameId,
+        hasGameState: !!gameState
       });
       
       if (savedPlayerId && savedPlayerSecret && savedGameId) {
@@ -64,32 +73,35 @@ export function HomePage() {
           isHost: true
         } as any);
         
-        // Fetch the current game state
-        const fetchGameState = async () => {
-          try {
-            debugLog('📡 HomePage - Fetching game state for reconnection...');
-            const response = await fetch(`${serverUrl}/api/games/${savedGameId}`);
-            if (response.ok) {
-              const serverGameState = await response.json();
-              debugLog('✅ HomePage - Fetched game state:', serverGameState);
-              setGame(serverGameState, savedPlayerId, savedPlayerSecret);
-            } else {
-              errorLog('❌ HomePage - Failed to fetch game state:', response.status);
+        // Only fetch game state if we don't already have it
+        if (!gameState) {
+          const fetchGameState = async () => {
+            try {
+              debugLog('📡 HomePage - Fetching game state for reconnection...');
+              const response = await fetch(`${serverUrl}/api/games/${savedGameId}`);
+              if (response.ok) {
+                const serverGameState = await response.json();
+                debugLog('✅ HomePage - Fetched game state:', serverGameState);
+                setGame(serverGameState, savedPlayerId, savedPlayerSecret);
+              } else {
+                errorLog('❌ HomePage - Failed to fetch game state:', response.status);
+                // Clear invalid credentials
+                sessionStorage.removeItem('tv_playerId');
+                sessionStorage.removeItem('tv_playerSecret');
+                sessionStorage.removeItem('tv_gameId');
+              }
+            } catch (error) {
+              errorLog('❌ HomePage - Error fetching game state:', error);
               // Clear invalid credentials
               sessionStorage.removeItem('tv_playerId');
               sessionStorage.removeItem('tv_playerSecret');
               sessionStorage.removeItem('tv_gameId');
             }
-          } catch (error) {
-            errorLog('❌ HomePage - Error fetching game state:', error);
-            // Clear invalid credentials
-            sessionStorage.removeItem('tv_playerId');
-            sessionStorage.removeItem('tv_playerSecret');
-            sessionStorage.removeItem('tv_gameId');
-          }
-        };
+          };
+          
+          fetchGameState();
+        }
         
-        fetchGameState();
         setHasReconnected(true);
       }
     }
@@ -356,7 +368,8 @@ export function HomePage() {
     return { current, total };
   };
 
-  const isGameInProgress = gameState.status === 'playing' || 
+  const isGameInProgress = gameState.status === 'informing_players' ||
+                          gameState.status === 'playing' || 
                           gameState.status === 'accusing' || 
                           gameState.status === 'round_summary';
 
@@ -602,6 +615,26 @@ export function HomePage() {
                       >
                         {countdown}s until next round
                       </div>
+
+                      <button
+                        onClick={() => emit('start_round')}
+                        style={{
+                          padding: '1rem 2rem',
+                          fontSize: '1.2rem',
+                          fontWeight: 'bold',
+                          backgroundColor: '#3b82f6',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '10px',
+                          cursor: 'pointer',
+                          marginTop: '1rem',
+                          transition: 'background-color 0.2s'
+                        }}
+                        onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
+                        onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#3b82f6'}
+                      >
+                        Start Next Round
+                      </button>
                     </>
                   );
                 } else if (roundResult.civiliansWon) {
@@ -662,6 +695,26 @@ export function HomePage() {
                       >
                         {countdown}s until next round
                       </div>
+
+                      <button
+                        onClick={() => emit('start_round')}
+                        style={{
+                          padding: '1rem 2rem',
+                          fontSize: '1.2rem',
+                          fontWeight: 'bold',
+                          backgroundColor: '#3b82f6',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '10px',
+                          cursor: 'pointer',
+                          marginTop: '1rem',
+                          transition: 'background-color 0.2s'
+                        }}
+                        onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
+                        onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#3b82f6'}
+                      >
+                        Start Next Round
+                      </button>
                     </>
                   );
                 }
@@ -695,6 +748,19 @@ export function HomePage() {
               >
                 Game in progress
               </div>
+
+              {gameState.status === 'informing_players' && (
+                <div 
+                  style={{
+                    fontSize: 'clamp(1.2rem, 2.5vw, 1.8rem)',
+                    color: '#ff7f50',
+                    textAlign: 'center',
+                    textShadow: '1px 1px 3px rgba(0, 0, 0, 0.3)'
+                  }}
+                >
+                  Players are reviewing their roles...
+                </div>
+              )}
 
               {gameState.status === 'playing' && currentPlayerName && (
                 <>

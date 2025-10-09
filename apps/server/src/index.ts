@@ -156,7 +156,7 @@ io.on('connection', (socket) => {
           socket.join(playerId);
           
           // Send role assignment if game is active
-          if (game.status === 'playing' || game.status === 'accusing') {
+          if (game.status === 'informing_players' || game.status === 'playing' || game.status === 'accusing') {
             socket.emit('role_assignment', {
               role: existingPlayer.role,
               location: existingPlayer.location
@@ -169,6 +169,31 @@ io.on('connection', (socket) => {
             data: { playerId, playerName: existingPlayer.name }
           });
 
+          return;
+        }
+        
+        // Check if this is TV Host reconnecting (not in players array)
+        if (isHost && sanitizedName === 'TV Host') {
+          debugLog(`🎮 Server - TV Host reconnecting to game ${gameId} with existing credentials`);
+          
+          // Use the provided credentials for reconnection
+          currentGameId = gameId;
+          currentPlayerId = playerId;
+          
+          // Join the game room to receive updates
+          socket.join(gameId);
+          socket.join(playerId);
+          debugLog(`🔗 Server - TV Host socket ${socket.id} rejoined rooms: [${gameId}, ${playerId}]`);
+          
+          // Send confirmation (no need to send new credentials)
+          socket.emit('game_update', {
+            type: 'player_reconnected',
+            data: {
+              playerId,
+              playerName: sanitizedName
+            }
+          });
+          
           return;
         }
       }
@@ -322,20 +347,53 @@ io.on('connection', (socket) => {
       });
     });
 
-    // Broadcast round started
-    debugLog(`📡 Server - Broadcasting round_started to game ${currentGameId}`);
+    // Broadcast informing_players state (not round_started yet)
+    debugLog(`📡 Server - Broadcasting informing_players to game ${currentGameId}`);
     const socketsInRoom = io.sockets.adapter.rooms.get(currentGameId);
     debugLog(`📡 Server - Sockets in room ${currentGameId}:`, socketsInRoom ? Array.from(socketsInRoom) : 'none');
     debugLog(`📡 Server - Total sockets in room: ${socketsInRoom?.size || 0}`);
     
     io.to(currentGameId).emit('game_update', {
-      type: 'round_started',
+      type: 'informing_players',
       data: {
-        roundNumber: game.roundNumber,
-        currentPlayerIndex: game.currentPlayerIndex
+        roundNumber: game.roundNumber
       }
     });
-    debugLog(`📡 Server - round_started broadcast complete`);
+    debugLog(`📡 Server - informing_players broadcast complete`);
+  });
+
+  // Acknowledge role info (player confirmed they saw their role/location)
+  socket.on('acknowledge_role_info', () => {
+    if (!currentGameId || !currentPlayerId) return;
+
+    const game = gameManager.getGame(currentGameId);
+    if (!game) return;
+
+    debugLog(`🎯 Server - Player ${currentPlayerId} acknowledging role info`);
+    
+    const success = gameManager.acknowledgeRoleInfo(currentGameId, currentPlayerId);
+    if (!success) {
+      socket.emit('error', { message: 'Failed to acknowledge role info' });
+      return;
+    }
+
+    // Broadcast that this player has acknowledged
+    io.to(currentGameId).emit('game_update', {
+      type: 'player_acknowledged',
+      data: { playerId: currentPlayerId }
+    });
+
+    // Check if game has transitioned to playing
+    if (game.status === 'playing') {
+      debugLog(`🎮 Server - All players acknowledged, starting question round`);
+      io.to(currentGameId).emit('game_update', {
+        type: 'round_started',
+        data: {
+          roundNumber: game.roundNumber,
+          currentPlayerIndex: game.currentPlayerIndex
+        }
+      });
+    }
   });
 
   // Next turn (player clicked "Next" button after asking question)
@@ -432,12 +490,11 @@ io.on('connection', (socket) => {
               });
             });
 
-            // Broadcast round started
+            // Broadcast informing_players state
             io.to(gameIdForTimeout).emit('game_update', {
-              type: 'round_started',
+              type: 'informing_players',
               data: {
-                roundNumber: updatedGame.roundNumber,
-                currentPlayerIndex: updatedGame.currentPlayerIndex
+                roundNumber: updatedGame.roundNumber
               }
             });
           }
@@ -514,12 +571,11 @@ io.on('connection', (socket) => {
               });
             });
 
-            // Broadcast round started
+            // Broadcast informing_players state
             io.to(gameIdForTimeout).emit('game_update', {
-              type: 'round_started',
+              type: 'informing_players',
               data: {
-                roundNumber: updatedGame.roundNumber,
-                currentPlayerIndex: updatedGame.currentPlayerIndex
+                roundNumber: updatedGame.roundNumber
               }
             });
           }
