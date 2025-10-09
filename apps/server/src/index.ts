@@ -646,16 +646,12 @@ setInterval(() => {
 const PORT = parseInt(process.env.SERVER_PORT || '4000');
 const HOST = process.env.HOST || '0.0.0.0'; // Bind to all interfaces for network access
 
-export function startServer() {
+// Only start server when this file is run directly (not when imported)
+// This prevents the server from starting during test cleanup/imports
+if (require.main === module) {
   server.listen(PORT, HOST, () => {
     console.log(`Spyfall server running on ${HOST}:${PORT}`);
     console.log(`Web origin: ${process.env.WEB_ORIGIN || 'http://localhost:5173'}`);
     console.log(`Access from network: http://YOUR_IP:${PORT}`);
   });
-}
-
-// Only start the server if not in test environment
-// Tests use global setup to manage server lifecycle
-if (process.env.NODE_ENV !== 'test') {
-  startServer();
 }

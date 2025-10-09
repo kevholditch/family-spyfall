@@ -27,8 +27,7 @@ export async function setup() {
     stdio: 'inherit',
     env: {
       ...process.env,
-      SERVER_PORT: '4000',
-      NODE_ENV: 'test'
+      SERVER_PORT: '4000'
     }
   });
 
@@ -46,19 +45,24 @@ export async function teardown() {
     
     // Wait for graceful shutdown
     await new Promise<void>((resolve) => {
-      serverProcess!.on('exit', () => {
+      const exitHandler = () => {
         console.log('✅ Test server stopped');
+        clearTimeout(forceKillTimeout);
         resolve();
-      });
+      };
       
-      // Force kill after 5 seconds if not gracefully shut down
-      setTimeout(() => {
+      serverProcess!.once('exit', exitHandler);
+      
+      // Force kill after 3 seconds if not gracefully shut down
+      const forceKillTimeout = setTimeout(() => {
         if (serverProcess && !serverProcess.killed) {
           serverProcess.kill('SIGKILL');
-          resolve();
         }
-      }, 5000);
+        resolve();
+      }, 3000);
     });
+    
+    serverProcess = null;
   }
 }
 
