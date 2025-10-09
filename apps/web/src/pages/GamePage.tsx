@@ -191,7 +191,7 @@ export function GamePage() {
             </div>
             <div className="flex items-center space-x-2">
               <Clock className="w-6 h-6 text-green-400" />
-              <span>Round: <strong className="text-yellow-400">{gameState.roundNumber}</strong></span>
+              <span>Round {gameState.roundNumber}</span>
             </div>
           </div>
         </div>
