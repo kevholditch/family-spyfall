@@ -147,6 +147,11 @@ export function useGameState() {
           return prev;
 
         case 'round_summary':
+          console.log('🎯 round_summary update received:', {
+            roundResult: update.data.roundResult,
+            hasSpyName: !!update.data.roundResult?.spyName,
+            hasTotalCiviliansCount: update.data.roundResult?.totalCiviliansCount !== undefined
+          });
           return {
             ...prev,
             status: 'round_summary',

@@ -238,17 +238,19 @@ export class GameManager {
     // Track points awarded this round
     const pointsAwarded: Record<string, number> = {};
 
+    // Calculate civilian vote statistics
+    const correctVoters = civilians.filter(c => game.accuseMode!.playerVotes[c.id] === spy.id);
+    const correctVoterNames = correctVoters.map(c => c.name);
+
     // Award points (spy win takes precedence)
     if (spyWon) {
       spy.score += 3;
       pointsAwarded[spy.id] = 3;
     } else if (civiliansWon) {
       // Only award civilian points if spy didn't win
-      civilians.forEach(c => {
-        if (game.accuseMode!.playerVotes[c.id] === spy.id) {
-          c.score += 1;
-          pointsAwarded[c.id] = 1;
-        }
+      correctVoters.forEach(c => {
+        c.score += 1;
+        pointsAwarded[c.id] = 1;
       });
     }
 
@@ -265,14 +267,20 @@ export class GameManager {
         p.hasAskedQuestion = false;
       });
     } else {
-      // Show round summary
+      // Show round summary with computed display data
       game.status = 'round_summary';
       game.roundResult = {
         spyGuessedCorrectly: spyWon,
         civiliansWon,
         spyGuess: game.accuseMode.spyLocationGuess,
         correctLocation: game.currentLocation || '',
-        pointsAwarded
+        pointsAwarded,
+        // Computed display data for frontend
+        spyName: spy.name,
+        spyId: spy.id,
+        correctVotersCount: correctVoters.length,
+        totalCiviliansCount: civilians.length,
+        correctVoterNames
       };
     }
   }

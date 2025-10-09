@@ -485,6 +485,11 @@ io.on('connection', (socket) => {
     // Check if results need to be sent
     if (game.status === 'round_summary') {
       // Broadcast round summary
+      debugLog('📤 Broadcasting round_summary from submit_player_vote:', {
+        roundResult: game.roundResult,
+        hasSpyName: !!game.roundResult?.spyName,
+        hasTotalCiviliansCount: game.roundResult?.totalCiviliansCount !== undefined
+      });
       io.to(currentGameId).emit('game_update', {
         type: 'round_summary',
         data: {

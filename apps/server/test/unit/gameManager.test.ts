@@ -337,4 +337,173 @@ describe('GameManager', () => {
       ));
     });
   });
+
+  describe('Round Summary Calculation', () => {
+    it('should correctly calculate when all civilians vote for spy and spy guesses wrong', () => {
+      const gameId = gameManager.createGame();
+      gameManager.addPlayer(gameId, 'Alice', true);
+      gameManager.addPlayer(gameId, 'Bob');
+      gameManager.addPlayer(gameId, 'Charlie');
+      
+      gameManager.startRound(gameId);
+      const game = gameManager.getGame(gameId)!;
+      
+      // Complete question round
+      game.players.forEach(() => gameManager.nextTurn(gameId));
+      
+      const spy = game.players.find(p => p.role === 'spy')!;
+      const civilians = game.players.filter(p => p.role === 'civilian');
+      
+      // Spy guesses wrong location
+      gameManager.submitSpyGuess(gameId, spy.id, 'Wrong Location');
+      
+      // All civilians vote for spy
+      civilians.forEach(c => {
+        gameManager.submitPlayerVote(gameId, c.id, spy.id);
+      });
+      
+      const updatedGame = gameManager.getGame(gameId)!;
+      
+      expect(updatedGame.status).toBe('round_summary');
+      expect(updatedGame.roundResult).toBeDefined();
+      expect(updatedGame.roundResult?.civiliansWon).toBe(true);
+      expect(updatedGame.roundResult?.spyGuessedCorrectly).toBe(false);
+      
+      // All civilians should get points
+      civilians.forEach(c => {
+        const player = updatedGame.players.find(p => p.id === c.id)!;
+        expect(player.score).toBe(1);
+        expect(updatedGame.roundResult?.pointsAwarded[c.id]).toBe(1);
+      });
+      
+      // Spy should get no points
+      const spyPlayer = updatedGame.players.find(p => p.id === spy.id)!;
+      expect(spyPlayer.score).toBe(0);
+
+      // Verify computed display fields are set
+      expect(updatedGame.roundResult?.spyName).toBe(spy.name);
+      expect(updatedGame.roundResult?.spyId).toBe(spy.id);
+      expect(updatedGame.roundResult?.correctVotersCount).toBe(2); // Both civilians voted correctly
+      expect(updatedGame.roundResult?.totalCiviliansCount).toBe(2);
+      expect(updatedGame.roundResult?.correctVoterNames).toEqual(expect.arrayContaining(civilians.map(c => c.name)));
+    });
+
+    it('should correctly calculate when minority of civilians vote for spy and spy guesses wrong', () => {
+      const gameId = gameManager.createGame();
+      // Add 5 players (4 civilians, 1 spy) to test minority scenario
+      gameManager.addPlayer(gameId, 'Alice', true);
+      gameManager.addPlayer(gameId, 'Bob');
+      gameManager.addPlayer(gameId, 'Charlie');
+      gameManager.addPlayer(gameId, 'Dave');
+      gameManager.addPlayer(gameId, 'Eve');
+      
+      gameManager.startRound(gameId);
+      const game = gameManager.getGame(gameId)!;
+      
+      // Complete question round
+      game.players.forEach(() => gameManager.nextTurn(gameId));
+      
+      const spy = game.players.find(p => p.role === 'spy')!;
+      const civilians = game.players.filter(p => p.role === 'civilian');
+      
+      // Spy guesses wrong location
+      gameManager.submitSpyGuess(gameId, spy.id, 'Wrong Location');
+      
+      // Only 1 out of 4 civilians votes for spy (majority = ceil(4/2) = 2, so 1 is not enough)
+      gameManager.submitPlayerVote(gameId, civilians[0].id, spy.id);
+      gameManager.submitPlayerVote(gameId, civilians[1].id, civilians[0].id);
+      gameManager.submitPlayerVote(gameId, civilians[2].id, civilians[1].id);
+      gameManager.submitPlayerVote(gameId, civilians[3].id, civilians[2].id);
+      
+      const updatedGame = gameManager.getGame(gameId)!;
+      
+      // When nobody wins, game continues with new question round (not round_summary)
+      expect(updatedGame.status).toBe('playing');
+      expect(updatedGame.roundResult).toBeUndefined(); // No round result when nobody wins
+      
+      // No one gets points when nobody wins
+      updatedGame.players.forEach(p => {
+        expect(p.score).toBe(0);
+      });
+    });
+
+    it('should correctly calculate when spy guesses correct location', () => {
+      const gameId = gameManager.createGame();
+      gameManager.addPlayer(gameId, 'Alice', true);
+      gameManager.addPlayer(gameId, 'Bob');
+      gameManager.addPlayer(gameId, 'Charlie');
+      
+      gameManager.startRound(gameId);
+      const game = gameManager.getGame(gameId)!;
+      
+      // Complete question round
+      game.players.forEach(() => gameManager.nextTurn(gameId));
+      
+      const spy = game.players.find(p => p.role === 'spy')!;
+      const civilians = game.players.filter(p => p.role === 'civilian');
+      
+      // Spy guesses correct location
+      gameManager.submitSpyGuess(gameId, spy.id, game.currentLocation!);
+      
+      // All civilians vote for spy
+      civilians.forEach(c => {
+        gameManager.submitPlayerVote(gameId, c.id, spy.id);
+      });
+      
+      const updatedGame = gameManager.getGame(gameId)!;
+      
+      expect(updatedGame.status).toBe('round_summary');
+      expect(updatedGame.roundResult).toBeDefined();
+      expect(updatedGame.roundResult?.spyGuessedCorrectly).toBe(true);
+      expect(updatedGame.roundResult?.civiliansWon).toBe(true); // Civilians identified spy, but spy wins anyway
+      
+      // Spy gets 3 points (spy win takes precedence)
+      const spyPlayer = updatedGame.players.find(p => p.id === spy.id)!;
+      expect(spyPlayer.score).toBe(3);
+      expect(updatedGame.roundResult?.pointsAwarded[spy.id]).toBe(3);
+      
+      // Civilians get no points (spy win takes precedence)
+      civilians.forEach(c => {
+        const player = updatedGame.players.find(p => p.id === c.id)!;
+        expect(player.score).toBe(0);
+        expect(updatedGame.roundResult?.pointsAwarded[c.id]).toBeUndefined();
+      });
+    });
+
+    it('should correctly calculate when majority of civilians vote for spy', () => {
+      const gameId = gameManager.createGame();
+      // Add 4 players to test majority (3 civilians, 1 spy)
+      gameManager.addPlayer(gameId, 'Alice', true);
+      gameManager.addPlayer(gameId, 'Bob');
+      gameManager.addPlayer(gameId, 'Charlie');
+      gameManager.addPlayer(gameId, 'Dave');
+      
+      gameManager.startRound(gameId);
+      const game = gameManager.getGame(gameId)!;
+      
+      // Complete question round
+      game.players.forEach(() => gameManager.nextTurn(gameId));
+      
+      const spy = game.players.find(p => p.role === 'spy')!;
+      const civilians = game.players.filter(p => p.role === 'civilian');
+      
+      // Spy guesses wrong location
+      gameManager.submitSpyGuess(gameId, spy.id, 'Wrong Location');
+      
+      // 2 out of 3 civilians vote for spy (majority = ceil(3/2) = 2)
+      gameManager.submitPlayerVote(gameId, civilians[0].id, spy.id);
+      gameManager.submitPlayerVote(gameId, civilians[1].id, spy.id);
+      gameManager.submitPlayerVote(gameId, civilians[2].id, civilians[0].id);
+      
+      const updatedGame = gameManager.getGame(gameId)!;
+      
+      expect(updatedGame.status).toBe('round_summary');
+      expect(updatedGame.roundResult?.civiliansWon).toBe(true);
+      
+      // Only the 2 civilians who voted correctly get points
+      expect(updatedGame.players.find(p => p.id === civilians[0].id)!.score).toBe(1);
+      expect(updatedGame.players.find(p => p.id === civilians[1].id)!.score).toBe(1);
+      expect(updatedGame.players.find(p => p.id === civilians[2].id)!.score).toBe(0);
+    });
+  });
 });

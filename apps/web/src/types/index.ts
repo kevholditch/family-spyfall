@@ -15,6 +15,12 @@ export interface RoundResult {
   spyGuess?: string;
   correctLocation: string;
   pointsAwarded: Record<string, number>; // playerId -> points awarded this round
+  // Computed display data (server calculates these for frontend to display)
+  spyName: string;
+  spyId: string;
+  correctVotersCount: number; // How many civilians voted correctly
+  totalCiviliansCount: number; // Total number of civilians
+  correctVoterNames: string[]; // Names of civilians who voted correctly
 }
 
 export interface GameState {

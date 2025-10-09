@@ -454,6 +454,7 @@ export function HomePage() {
           {/* Right Side - Game Status Information or Round Summary */}
           {gameState.status === 'round_summary' ? (
             // Round Summary Display
+           
             <div 
               data-testid="tv-round-summary"
               style={{
@@ -482,13 +483,16 @@ export function HomePage() {
                   );
                 }
 
-                // Use players from round result data if available, otherwise fall back to game state
-                const playersWithRoles = roundResult.players || actualPlayers;
-                const gamePlayers = playersWithRoles.filter(p => p.name !== 'TV Host');
-                const spy = gamePlayers.find(p => p.role === 'spy');
-                const civilians = gamePlayers.filter(p => p.role === 'civilian');
+                // Defensive check: ensure we have the computed fields from server
+                if (!roundResult.spyName || roundResult.totalCiviliansCount === undefined) {
+                  return (
+                    <div style={{ color: '#ff7f50', textAlign: 'center' }}>
+                      Loading round results...
+                    </div>
+                  );
+                }
                 
-                if (roundResult.spyGuessedCorrectly && spy) {
+                if (roundResult.spyGuessedCorrectly) {
                   // Spy won
                   return (
                     <>
@@ -511,7 +515,7 @@ export function HomePage() {
                           textAlign: 'center'
                         }}
                       >
-                        The spy was {spy.name}, they correctly guessed the location was {roundResult.spyGuess}
+                        The spy was {roundResult.spyName}, they correctly guessed the location was {roundResult.spyGuess}
                       </div>
 
                       <div 
@@ -522,7 +526,7 @@ export function HomePage() {
                           textAlign: 'center'
                         }}
                       >
-                        +3 {spy.name}
+                        +3 {roundResult.spyName}
                       </div>
 
                       <div 
@@ -537,12 +541,8 @@ export function HomePage() {
                       </div>
                     </>
                   );
-                } else if (roundResult.civiliansWon && spy) {
+                } else if (roundResult.civiliansWon) {
                   // Civilians won
-                  const correctVoters = civilians.filter(c => 
-                    gameState.accuseMode?.playerVotes[c.id] === spy.id
-                  );
-                  
                   return (
                     <>
                       <div 
@@ -564,7 +564,7 @@ export function HomePage() {
                           textAlign: 'center'
                         }}
                       >
-                        {correctVoters.length}/{civilians.length} civilians guessed the spy was {spy.name}
+                        {roundResult.correctVotersCount}/{roundResult.totalCiviliansCount} civilians guessed the spy was {roundResult.spyName}
                       </div>
 
                       <div 
@@ -575,16 +575,16 @@ export function HomePage() {
                           alignItems: 'center'
                         }}
                       >
-                        {correctVoters.map(voter => (
+                        {roundResult.correctVoterNames.map(voterName => (
                           <div
-                            key={voter.id}
+                            key={voterName}
                             style={{
                               fontSize: 'clamp(1.1rem, 2.2vw, 1.5rem)',
                               fontWeight: 'bold',
                               color: '#ffd700'
                             }}
                           >
-                            +1 {voter.name}
+                            +1 {voterName}
                           </div>
                         ))}
                       </div>
