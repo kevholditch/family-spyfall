@@ -101,7 +101,8 @@ export function GamePage() {
         window.location.href = `/join/${gameId}`;
       }
     }
-  }, [isConnected, gameId, hasRejoined, emit, serverUrl, setGame]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isConnected, gameId, hasRejoined, serverUrl]);
 
   if (!isConnected) {
     return (

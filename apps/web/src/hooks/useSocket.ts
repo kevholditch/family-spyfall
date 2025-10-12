@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { io, Socket } from 'socket.io-client';
 import { SocketEvents, GameUpdate, RoleAssignment } from '../types';
 import { debugLog, debugError } from '../utils/debug';
@@ -19,6 +20,7 @@ export function useSocket(serverUrl: string = 'http://localhost:4000'): UseSocke
   const [gameUpdate, setGameUpdate] = useState<GameUpdate | null>(null);
   const [roleAssignment, setRoleAssignment] = useState<RoleAssignment | null>(null);
   const socketRef = useRef<Socket<SocketEvents> | null>(null);
+  const updateCounterRef = useRef(0);
 
   useEffect(() => {
     debugLog('🔌 useSocket - Creating new socket connection to:', serverUrl);
@@ -43,7 +45,15 @@ export function useSocket(serverUrl: string = 'http://localhost:4000'): UseSocke
 
     newSocket.on('game_update', (update) => {
       debugLog('🔌 useSocket - Received game_update event:', update);
-      setGameUpdate(update);
+      if (update.type === 'round_started') {
+        debugLog('🎮 useSocket - ROUND_STARTED event received!', update.data);
+      }
+      // Use flushSync to force synchronous state update and prevent React from batching
+      // This ensures each game_update triggers the useEffect in components that depend on it
+      flushSync(() => {
+        updateCounterRef.current += 1;
+        setGameUpdate({ ...update, _updateId: updateCounterRef.current });
+      });
     });
 
     newSocket.on('role_assignment', (data) => {
