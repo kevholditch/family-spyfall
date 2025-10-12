@@ -1,4 +1,9 @@
-.PHONY: test-server test-web test-web-chrome test
+.PHONY: test-server test-web test-web-chrome test install-browsers
+
+# Install Playwright browsers with dependencies
+install-browsers:
+	@echo "Installing Playwright browsers..."
+	pnpm -C apps/web exec playwright install --with-deps
 
 # Run server tests (unit + integration)
 test-server:
