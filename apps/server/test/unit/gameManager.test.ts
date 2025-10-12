@@ -243,14 +243,14 @@ describe('GameManager', () => {
       const game = gameManager.getGame(gameId);
       expect(game?.currentPlayerIndex).toBe(0);
       
-      gameManager.nextTurn(gameId);
+      if (alice) gameManager.nextTurn(gameId, alice.playerId);
       expect(game?.currentPlayerIndex).toBe(1);
       
-      gameManager.nextTurn(gameId);
+      if (bob) gameManager.nextTurn(gameId, bob.playerId);
       expect(game?.currentPlayerIndex).toBe(2);
       
       // After all players have asked questions, should transition to accusing mode
-      gameManager.nextTurn(gameId);
+      if (charlie) gameManager.nextTurn(gameId, charlie.playerId);
       expect(game?.status).toBe('accusing');
     });
 
@@ -272,8 +272,88 @@ describe('GameManager', () => {
         game.players[1].isConnected = false; // Bob is disconnected
       }
       
-      gameManager.nextTurn(gameId);
+      if (alice) gameManager.nextTurn(gameId, alice.playerId);
       expect(game?.currentPlayerIndex).toBe(2); // Skip Bob, go to Charlie
+    });
+
+    it('should not allow wrong player to advance turn', () => {
+      const gameId = gameManager.createGame();
+      
+      const alice = gameManager.addPlayer(gameId, 'Alice');
+      const bob = gameManager.addPlayer(gameId, 'Bob');
+      const charlie = gameManager.addPlayer(gameId, 'Charlie');
+      gameManager.startRound(gameId);
+      
+      // Acknowledge all players to transition to playing
+      if (alice) gameManager.acknowledgeRoleInfo(gameId, alice.playerId);
+      if (bob) gameManager.acknowledgeRoleInfo(gameId, bob.playerId);
+      if (charlie) gameManager.acknowledgeRoleInfo(gameId, charlie.playerId);
+      
+      const game = gameManager.getGame(gameId);
+      expect(game?.currentPlayerIndex).toBe(0); // Alice's turn
+      
+      // Bob tries to advance the turn when it's Alice's turn
+      if (bob) {
+        const result = gameManager.nextTurn(gameId, bob.playerId);
+        expect(result).toBe(false);
+        expect(game?.currentPlayerIndex).toBe(0); // Still Alice's turn
+      }
+      
+      // Alice can advance her own turn
+      if (alice) {
+        const result = gameManager.nextTurn(gameId, alice.playerId);
+        expect(result).toBe(true);
+        expect(game?.currentPlayerIndex).toBe(1); // Now Bob's turn
+      }
+    });
+
+    it('should prevent double turn advance from same player', () => {
+      const gameId = gameManager.createGame();
+      
+      const alice = gameManager.addPlayer(gameId, 'Alice');
+      const bob = gameManager.addPlayer(gameId, 'Bob');
+      const charlie = gameManager.addPlayer(gameId, 'Charlie');
+      gameManager.startRound(gameId);
+      
+      // Acknowledge all players to transition to playing
+      if (alice) gameManager.acknowledgeRoleInfo(gameId, alice.playerId);
+      if (bob) gameManager.acknowledgeRoleInfo(gameId, bob.playerId);
+      if (charlie) gameManager.acknowledgeRoleInfo(gameId, charlie.playerId);
+      
+      const game = gameManager.getGame(gameId);
+      expect(game?.currentPlayerIndex).toBe(0); // Alice's turn
+      
+      // Alice advances her turn
+      if (alice) {
+        const firstResult = gameManager.nextTurn(gameId, alice.playerId);
+        expect(firstResult).toBe(true);
+        expect(game?.currentPlayerIndex).toBe(1); // Now Bob's turn
+        
+        // Alice tries to advance again immediately (simulating double-click)
+        const secondResult = gameManager.nextTurn(gameId, alice.playerId);
+        expect(secondResult).toBe(false);
+        expect(game?.currentPlayerIndex).toBe(1); // Still Bob's turn, no skip
+      }
+    });
+
+    it('should not allow invalid player id to advance turn', () => {
+      const gameId = gameManager.createGame();
+      
+      const alice = gameManager.addPlayer(gameId, 'Alice');
+      const bob = gameManager.addPlayer(gameId, 'Bob');
+      gameManager.startRound(gameId);
+      
+      // Acknowledge all players to transition to playing
+      if (alice) gameManager.acknowledgeRoleInfo(gameId, alice.playerId);
+      if (bob) gameManager.acknowledgeRoleInfo(gameId, bob.playerId);
+      
+      const game = gameManager.getGame(gameId);
+      expect(game?.currentPlayerIndex).toBe(0); // Alice's turn
+      
+      // Try to advance with invalid player id
+      const result = gameManager.nextTurn(gameId, 'invalid-player-id');
+      expect(result).toBe(false);
+      expect(game?.currentPlayerIndex).toBe(0); // Still Alice's turn
     });
   });
 
@@ -294,9 +374,9 @@ describe('GameManager', () => {
       const game = gameManager.getGame(gameId);
       
       // Advance through all turns to reach accusing mode
-      gameManager.nextTurn(gameId);
-      gameManager.nextTurn(gameId);
-      gameManager.nextTurn(gameId);
+      if (alice) gameManager.nextTurn(gameId, alice.playerId);
+      if (bob) gameManager.nextTurn(gameId, bob.playerId);
+      if (charlie) gameManager.nextTurn(gameId, charlie.playerId);
       
       expect(game?.status).toBe('accusing');
       
@@ -326,9 +406,9 @@ describe('GameManager', () => {
       const game = gameManager.getGame(gameId);
       
       // Advance through all turns to reach accusing mode
-      gameManager.nextTurn(gameId);
-      gameManager.nextTurn(gameId);
-      gameManager.nextTurn(gameId);
+      if (alice) gameManager.nextTurn(gameId, alice.playerId);
+      if (bob) gameManager.nextTurn(gameId, bob.playerId);
+      if (charlie) gameManager.nextTurn(gameId, charlie.playerId);
       
       expect(game?.status).toBe('accusing');
       
@@ -363,9 +443,9 @@ describe('GameManager', () => {
       const game = gameManager.getGame(gameId);
       
       // Advance through all turns to reach accusing mode
-      gameManager.nextTurn(gameId);
-      gameManager.nextTurn(gameId);
-      gameManager.nextTurn(gameId);
+      if (alice) gameManager.nextTurn(gameId, alice.playerId);
+      if (bob) gameManager.nextTurn(gameId, bob.playerId);
+      if (charlie) gameManager.nextTurn(gameId, charlie.playerId);
       
       expect(game?.status).toBe('accusing');
       
@@ -466,12 +546,12 @@ describe('GameManager', () => {
           for (let i = 0; i < playerCount - 1; i++) {
             const game = gameManager.getGame(gameId);
             expect(game?.currentPlayerIndex).toBe(i);
-            gameManager.nextTurn(gameId);
+            gameManager.nextTurn(gameId, playerIds[i]);
           }
           
           // After last player's turn, game should transition to accusing mode
           const game = gameManager.getGame(gameId);
-          gameManager.nextTurn(gameId);
+          gameManager.nextTurn(gameId, playerIds[playerCount - 1]);
           expect(game?.status).toBe('accusing');
         }
       ));
@@ -495,7 +575,7 @@ describe('GameManager', () => {
       const game = gameManager.getGame(gameId)!;
       
       // Complete question round
-      game.players.forEach(() => gameManager.nextTurn(gameId));
+      game.players.forEach(player => gameManager.nextTurn(gameId, player.id));
       
       const spy = game.players.find(p => p.role === 'spy')!;
       const civilians = game.players.filter(p => p.role === 'civilian');
@@ -555,7 +635,7 @@ describe('GameManager', () => {
       const game = gameManager.getGame(gameId)!;
       
       // Complete question round
-      game.players.forEach(() => gameManager.nextTurn(gameId));
+      game.players.forEach(player => gameManager.nextTurn(gameId, player.id));
       
       const spy = game.players.find(p => p.role === 'spy')!;
       const civilians = game.players.filter(p => p.role === 'civilian');
@@ -597,7 +677,7 @@ describe('GameManager', () => {
       const game = gameManager.getGame(gameId)!;
       
       // Complete question round
-      game.players.forEach(() => gameManager.nextTurn(gameId));
+      game.players.forEach(player => gameManager.nextTurn(gameId, player.id));
       
       const spy = game.players.find(p => p.role === 'spy')!;
       const civilians = game.players.filter(p => p.role === 'civilian');
@@ -649,7 +729,7 @@ describe('GameManager', () => {
       const game = gameManager.getGame(gameId)!;
       
       // Complete question round
-      game.players.forEach(() => gameManager.nextTurn(gameId));
+      game.players.forEach(player => gameManager.nextTurn(gameId, player.id));
       
       const spy = game.players.find(p => p.role === 'spy')!;
       const civilians = game.players.filter(p => p.role === 'civilian');

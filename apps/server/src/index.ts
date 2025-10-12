@@ -401,16 +401,7 @@ io.on('connection', (socket) => {
     const game = gameManager.getGame(currentGameId);
     if (!game) return;
 
-    // Only the current player can advance their own turn
-    if (game.currentPlayerIndex >= 0 && game.currentPlayerIndex < game.players.length) {
-      const currentPlayer = game.players[game.currentPlayerIndex];
-      if (currentPlayer.id !== currentPlayerId) {
-        socket.emit('error', { message: 'Only the current player can advance the turn' });
-        return;
-      }
-    }
-
-    const success = gameManager.nextTurn(currentGameId);
+    const success = gameManager.nextTurn(currentGameId, currentPlayerId);
     if (!success) {
       socket.emit('error', { message: 'Failed to advance turn' });
       return;

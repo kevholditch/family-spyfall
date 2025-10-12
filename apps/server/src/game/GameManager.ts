@@ -146,15 +146,18 @@ export class GameManager {
     return true;
   }
 
-  nextTurn(gameId: string): boolean {
+  nextTurn(gameId: string, playerId: string): boolean {
     const game = this.games.get(gameId);
     if (!game || game.status !== 'playing') return false;
 
-    // Mark current player as having asked a question
+    // Defensive check: ensure the request is from the current player
     const currentPlayer = game.players[game.currentPlayerIndex];
-    if (currentPlayer) {
-      currentPlayer.hasAskedQuestion = true;
+    if (!currentPlayer || currentPlayer.id !== playerId) {
+      return false;
     }
+
+    // Mark current player as having asked a question
+    currentPlayer.hasAskedQuestion = true;
 
     // Check if all players have asked a question
     const allPlayersAsked = game.players.every(p => p.hasAskedQuestion);
