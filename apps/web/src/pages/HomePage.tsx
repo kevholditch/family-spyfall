@@ -204,7 +204,7 @@ export function HomePage() {
         fetchGameState();
       }
     }
-  }, [gameUpdate, createdGameId, setGame, gameState]);
+  }, [gameUpdate, createdGameId, setGame, gameState, serverUrl]);
 
   if (!isConnected) {
     return (

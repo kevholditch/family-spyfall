@@ -70,7 +70,7 @@ export function JoinPage() {
         }
       }
     }
-  }, [gameUpdate, updateGameState, hasJoined, gameId, addDebugMsg]);
+  }, [gameUpdate, updateGameState, hasJoined, gameId, addDebugMsg, emit, playerName]);
 
   // Handle game state changes (like when game starts) - fallback redirect
   useEffect(() => {
@@ -130,7 +130,7 @@ export function JoinPage() {
         setGame(gameState, playerId, secret);
       }
     }
-  }, [gameUpdate, playerName, gameId, gameState, setGame, addDebugMsg]);
+  }, [gameUpdate, playerName, gameId, gameState, setGame, addDebugMsg, hasJoined, isJoining]);
 
   const handleJoinGame = () => {
     if (!gameId || !playerName.trim()) {

@@ -112,10 +112,6 @@ export class TestPlayer {
   }
 
   async getScore(): Promise<number> {
-    // Find the "Points This Round:" section
-    const pointsHeading = await this.page.getByText('Points This Round:');
-    
-    // Get all player score cards (they're in a grid div after the heading)
     // Wait a bit to ensure content is rendered
     await this.page.waitForTimeout(500);
     

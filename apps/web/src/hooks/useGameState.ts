@@ -234,7 +234,7 @@ export function useGameState() {
       return gameState.players.find(p => p.id === playerId) || null;
     }
     return null;
-  }, [gameState?.players, playerId]);
+  }, [gameState, playerId]);
 
   return {
     gameState,

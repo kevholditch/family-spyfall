@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useSocket } from '../hooks/useSocket';
 import { useGameState } from '../hooks/useGameState';
-import { Eye, EyeOff, Users, Clock, ArrowLeft } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { debugLog, debugError } from '../utils/debug';
 import { SPYFALL_LOCATIONS } from '../types';
 
