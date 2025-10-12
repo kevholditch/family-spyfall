@@ -177,45 +177,85 @@ export function GamePage() {
 
   // Game is active - show role-specific content
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-6">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="mb-8 text-center">
-          <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
-            FAMILY SPYFALL
-          </h1>
-          <div className="flex items-center justify-center space-x-8 text-lg">
-            <div className="flex items-center space-x-2">
-              <Users className="w-6 h-6 text-blue-400" />
-              <span>Game ID: <strong className="text-yellow-400">{gameId}</strong></span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Clock className="w-6 h-6 text-green-400" />
-              <span>Round {gameState.roundNumber}</span>
-            </div>
-          </div>
-        </div>
-
+    <div 
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100vw',
+        height: '100vh',
+        backgroundColor: '#1e3a5f',
+        backgroundImage: `
+          radial-gradient(circle at 25% 25%, rgba(255, 255, 255, 0.02) 0%, transparent 50%),
+          radial-gradient(circle at 75% 75%, rgba(255, 255, 255, 0.02) 0%, transparent 50%),
+          url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.03'/%3E%3C/svg%3E")
+        `,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '2rem',
+        color: '#f5f5dc',
+        overflow: 'auto'
+      }}
+    >
+      <div className="max-w-4xl w-full">
         {/* Informing Players Phase */}
         {gameState.status === 'informing_players' && (
-          <div className="mb-8 bg-gray-800 rounded-xl p-8 shadow-xl text-center">
+          <div style={{ textAlign: 'center' }}>
             {!hasAcknowledged ? (
               // Show role info with acknowledge button
               <div>
                 {roleAssignment.role === 'spy' ? (
                   <div>
-                    <EyeOff className="w-24 h-24 mx-auto mb-4 text-red-400" />
-                    <h2 className="text-4xl font-bold text-red-400 mb-4">YOU ARE THE SPY!</h2>
-                    <p className="text-gray-300 text-lg mb-8">
+                    <h2 
+                      style={{
+                        fontSize: 'clamp(2rem, 5vw, 3rem)',
+                        fontWeight: 'bold',
+                        color: '#f5f5dc',
+                        marginBottom: '2rem'
+                      }}
+                    >
+                      YOU ARE THE SPY!
+                    </h2>
+                    <p 
+                      style={{
+                        fontSize: 'clamp(1.2rem, 3vw, 1.5rem)',
+                        color: '#f5f5dc',
+                        marginBottom: '3rem',
+                        lineHeight: '1.6'
+                      }}
+                    >
                       Your mission is to figure out the secret location without revealing that you're the spy.
                     </p>
                   </div>
                 ) : (
                   <div>
-                    <Eye className="w-24 h-24 mx-auto mb-4 text-green-400" />
-                    <h2 className="text-3xl font-bold text-green-400 mb-4">YOUR LOCATION</h2>
-                    <div className="bg-green-900/20 border border-green-500 rounded-lg p-8 mb-8">
-                      <h3 className="text-4xl font-bold text-green-400">
+                    <h2 
+                      style={{
+                        fontSize: 'clamp(1.5rem, 4vw, 2rem)',
+                        fontWeight: 'bold',
+                        color: '#f5f5dc',
+                        marginBottom: '2rem'
+                      }}
+                    >
+                      YOUR LOCATION
+                    </h2>
+                    <div 
+                      style={{
+                        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                        borderRadius: '12px',
+                        padding: '2rem',
+                        marginBottom: '3rem'
+                      }}
+                    >
+                      <h3 
+                        style={{
+                          fontSize: 'clamp(2rem, 5vw, 3rem)',
+                          fontWeight: 'bold',
+                          color: '#f5f5dc'
+                        }}
+                      >
                         {roleAssignment.location}
                       </h3>
                     </div>
@@ -223,17 +263,57 @@ export function GamePage() {
                 )}
                 <button
                   onClick={handleAcknowledgeRole}
-                  className="px-12 py-4 bg-blue-600 text-white text-xl font-bold rounded-lg hover:bg-blue-700 transition-colors"
+                  style={{
+                    padding: '1rem 3rem',
+                    fontSize: 'clamp(1.2rem, 3vw, 1.5rem)',
+                    fontWeight: 'bold',
+                    backgroundColor: '#ff8c42',
+                    color: '#f5f5dc',
+                    border: 'none',
+                    borderRadius: '10px',
+                    cursor: 'pointer',
+                    transition: 'background-color 0.2s',
+                    boxShadow: '0 4px 16px rgba(255, 140, 66, 0.3)'
+                  }}
+                  onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#ff9f66'}
+                  onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#ff8c42'}
                 >
-                  I Understand
+                  Ready
                 </button>
               </div>
             ) : (
               // Show waiting message after acknowledgment
               <div>
-                <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500 mx-auto mb-6"></div>
-                <h2 className="text-2xl font-bold text-white mb-2">Waiting for other players...</h2>
-                <p className="text-gray-400">Everyone needs to confirm they've seen their role before the round starts</p>
+                <div 
+                  style={{
+                    width: '4rem',
+                    height: '4rem',
+                    border: '4px solid rgba(255, 140, 66, 0.3)',
+                    borderTop: '4px solid #ff8c42',
+                    borderRadius: '50%',
+                    animation: 'spin 1s linear infinite',
+                    margin: '0 auto 2rem'
+                  }}
+                ></div>
+                <h2 
+                  style={{
+                    fontSize: 'clamp(1.5rem, 4vw, 2rem)',
+                    fontWeight: 'bold',
+                    color: '#f5f5dc',
+                    marginBottom: '1rem'
+                  }}
+                >
+                  Waiting for other players...
+                </h2>
+                <p 
+                  style={{
+                    fontSize: 'clamp(1rem, 2vw, 1.2rem)',
+                    color: '#f5f5dc',
+                    opacity: 0.8
+                  }}
+                >
+                  Everyone needs to confirm they've seen their role before the round starts
+                </p>
               </div>
             )}
           </div>
@@ -241,81 +321,229 @@ export function GamePage() {
 
         {/* Question Phase */}
         {gameState.status === 'playing' && (
-          <div className="mb-8 bg-gray-800 rounded-xl p-6 shadow-xl">
-            <h2 className="text-2xl font-bold text-center mb-4">Question Round</h2>
-            <div className="text-center mb-6">
-              <p className="text-xl text-gray-300 mb-2">Current Turn:</p>
-              <p className="text-3xl font-bold text-yellow-400">{currentTurnPlayer?.name || 'Unknown'}</p>
+          <div style={{ textAlign: 'center' }}>
+            {/* Top Info Bar */}
+            <div 
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                marginBottom: '3rem',
+                fontSize: 'clamp(1.2rem, 3vw, 1.5rem)',
+                fontWeight: 'bold',
+                color: '#f5f5dc'
+              }}
+            >
+              <div>R{gameState.roundNumber}</div>
+              <div>{currentPlayer?.score || 0} Pts</div>
             </div>
-            {isMyTurn && (
-              <div className="text-center">
-                <p className="text-lg text-gray-300 mb-4">It's your turn! Ask your question, then click Next.</p>
-                <button
-                  onClick={handleNextTurn}
-                  className="px-8 py-4 bg-blue-600 text-white text-xl font-bold rounded-lg hover:bg-blue-700 transition-colors"
+            
+            {/* Center Content */}
+            <div style={{ marginBottom: '2rem' }}>
+              {isMyTurn ? (
+                <div>
+                  <p 
+                    style={{
+                      fontSize: 'clamp(1.5rem, 4vw, 2.5rem)',
+                      fontWeight: 'bold',
+                      color: '#f5f5dc',
+                      marginBottom: '2rem'
+                    }}
+                  >
+                    Ask a question
+                  </p>
+                  <button
+                    onClick={handleNextTurn}
+                    style={{
+                      padding: '1rem 3rem',
+                      fontSize: 'clamp(1.2rem, 3vw, 1.5rem)',
+                      fontWeight: 'bold',
+                      backgroundColor: '#ff8c42',
+                      color: '#f5f5dc',
+                      border: 'none',
+                      borderRadius: '10px',
+                      cursor: 'pointer',
+                      transition: 'background-color 0.2s',
+                      boxShadow: '0 4px 16px rgba(255, 140, 66, 0.3)'
+                    }}
+                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#ff9f66'}
+                    onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#ff8c42'}
+                  >
+                    Done
+                  </button>
+                </div>
+              ) : (
+                <p 
+                  style={{
+                    fontSize: 'clamp(1.5rem, 4vw, 2.5rem)',
+                    fontWeight: 'bold',
+                    color: '#f5f5dc'
+                  }}
                 >
-                  Next
-                </button>
-              </div>
-            )}
+                  {currentTurnPlayer?.name || 'Unknown'} asking question
+                </p>
+              )}
+            </div>
           </div>
         )}
 
         {/* Round Summary */}
         {gameState.status === 'round_summary' && gameState.roundResult && (
-          <div className="mb-8 bg-gray-800 rounded-xl p-8 shadow-xl">
-            <h2 className="text-3xl font-bold text-center mb-6 text-yellow-400">Round Results!</h2>
+          <div style={{ textAlign: 'center' }}>
+            <h2 
+              style={{
+                fontSize: 'clamp(1.5rem, 4vw, 2rem)',
+                fontWeight: 'bold',
+                color: '#f5f5dc',
+                marginBottom: '2rem'
+              }}
+            >
+              Round Results!
+            </h2>
             
             {/* Win/Loss Banner */}
-            <div className="mb-6">
+            <div style={{ marginBottom: '2rem' }}>
               {gameState.roundResult.spyGuessedCorrectly && (
-                <div className="p-6 rounded-lg bg-red-900/30 border border-red-500 text-center">
-                  <p className="text-2xl font-bold text-red-400 mb-2">Spy wins the round!</p>
-                  <p className="text-lg text-gray-300">Location: {gameState.roundResult.correctLocation}</p>
+                <div 
+                  style={{
+                    padding: '1.5rem',
+                    backgroundColor: 'rgba(255, 140, 66, 0.2)',
+                    borderRadius: '12px',
+                    marginBottom: '1rem'
+                  }}
+                >
+                  <p 
+                    style={{
+                      fontSize: 'clamp(1.2rem, 3vw, 1.5rem)',
+                      fontWeight: 'bold',
+                      color: '#f5f5dc',
+                      marginBottom: '0.5rem'
+                    }}
+                  >
+                    Spy wins the round!
+                  </p>
+                  <p 
+                    style={{
+                      fontSize: 'clamp(1rem, 2vw, 1.2rem)',
+                      color: '#f5f5dc'
+                    }}
+                  >
+                    Location: {gameState.roundResult.correctLocation}
+                  </p>
                 </div>
               )}
               
               {!gameState.roundResult.spyGuessedCorrectly && gameState.roundResult.civiliansWon && (
-                <div className="p-6 rounded-lg bg-green-900/30 border border-green-500 text-center">
-                  <p className="text-2xl font-bold text-green-400 mb-2">
+                <div 
+                  style={{
+                    padding: '1.5rem',
+                    backgroundColor: 'rgba(255, 140, 66, 0.2)',
+                    borderRadius: '12px',
+                    marginBottom: '1rem'
+                  }}
+                >
+                  <p 
+                    style={{
+                      fontSize: 'clamp(1.2rem, 3vw, 1.5rem)',
+                      fontWeight: 'bold',
+                      color: '#f5f5dc',
+                      marginBottom: '0.5rem'
+                    }}
+                  >
                     Civilians win the round, {Object.values(gameState.roundResult.pointsAwarded).filter(p => p > 0).length}/{gameState.players.length - 1} civilians guessed correctly!
                   </p>
-                  <p className="text-lg text-gray-300">Location: {gameState.roundResult.correctLocation}</p>
+                  <p 
+                    style={{
+                      fontSize: 'clamp(1rem, 2vw, 1.2rem)',
+                      color: '#f5f5dc'
+                    }}
+                  >
+                    Location: {gameState.roundResult.correctLocation}
+                  </p>
                 </div>
               )}
               
               {!gameState.roundResult.spyGuessedCorrectly && !gameState.roundResult.civiliansWon && (
-                <div className="p-6 rounded-lg bg-gray-700 text-center">
-                  <p className="text-2xl font-bold text-gray-400 mb-2">No winner this round!</p>
-                  <p className="text-lg text-gray-300">Location: {gameState.roundResult.correctLocation}</p>
+                <div 
+                  style={{
+                    padding: '1.5rem',
+                    backgroundColor: 'rgba(255, 140, 66, 0.2)',
+                    borderRadius: '12px',
+                    marginBottom: '1rem'
+                  }}
+                >
+                  <p 
+                    style={{
+                      fontSize: 'clamp(1.2rem, 3vw, 1.5rem)',
+                      fontWeight: 'bold',
+                      color: '#f5f5dc',
+                      marginBottom: '0.5rem'
+                    }}
+                  >
+                    No winner this round!
+                  </p>
+                  <p 
+                    style={{
+                      fontSize: 'clamp(1rem, 2vw, 1.2rem)',
+                      color: '#f5f5dc'
+                    }}
+                  >
+                    Location: {gameState.roundResult.correctLocation}
+                  </p>
                 </div>
               )}
             </div>
-            
-            {/* Detailed Result Summary */}
-            <div className="mb-6 space-y-4">
-              <div className={`p-4 rounded-lg ${gameState.roundResult.spyGuessedCorrectly ? 'bg-red-900/30 border border-red-500' : 'bg-gray-700'}`}>
-                <p className="text-lg">
-                  <strong>Spy's Guess:</strong> {gameState.roundResult.spyGuess || 'No guess'} 
-                  {gameState.roundResult.spyGuessedCorrectly && <span className="text-green-400 ml-2">✓ Correct! (+3 points)</span>}
-                  {!gameState.roundResult.spyGuessedCorrectly && gameState.roundResult.spyGuess && <span className="text-red-400 ml-2">✗ Wrong</span>}
-                </p>
-              </div>
-            </div>
 
             {/* Points Awarded */}
-            <div className="mb-6">
-              <h3 className="text-xl font-semibold mb-3">Points This Round:</h3>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+            <div style={{ marginBottom: '2rem' }}>
+              <h3 
+                style={{
+                  fontSize: 'clamp(1.2rem, 3vw, 1.5rem)',
+                  fontWeight: 'bold',
+                  color: '#f5f5dc',
+                  marginBottom: '1rem'
+                }}
+              >
+                Points This Round:
+              </h3>
+              <div 
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+                  gap: '1rem',
+                  maxWidth: '600px',
+                  margin: '0 auto'
+                }}
+              >
                 {gameState.players.map(player => {
                   const pointsAwarded = gameState.roundResult?.pointsAwarded[player.id] || 0;
+                  const isCurrentPlayer = player.id === currentPlayer?.id;
                   return (
                     <div 
                       key={player.id} 
-                      className={`p-3 rounded-lg ${pointsAwarded > 0 ? 'bg-green-900/50 border-2 border-green-500' : 'bg-gray-700'} ${player.id === currentPlayer?.id ? 'ring-2 ring-blue-400' : ''}`}
+                      style={{
+                        padding: '1rem',
+                        backgroundColor: isCurrentPlayer ? 'rgba(255, 215, 0, 0.3)' : 'rgba(255, 255, 255, 0.1)',
+                        border: isCurrentPlayer ? '2px solid #ffd700' : '1px solid rgba(255, 140, 66, 0.3)',
+                        borderRadius: '8px'
+                      }}
                     >
-                      <div className="font-semibold">{player.name}</div>
-                      <div className="text-2xl font-bold text-yellow-400">
+                      <div 
+                        style={{
+                          fontSize: 'clamp(1rem, 2vw, 1.2rem)',
+                          fontWeight: isCurrentPlayer ? 'bold' : 'normal',
+                          color: '#f5f5dc',
+                          marginBottom: '0.5rem'
+                        }}
+                      >
+                        {player.name}
+                      </div>
+                      <div 
+                        style={{
+                          fontSize: 'clamp(1.5rem, 3vw, 2rem)',
+                          fontWeight: 'bold',
+                          color: '#ffd700'
+                        }}
+                      >
                         {pointsAwarded > 0 ? `+${pointsAwarded}` : '0'}
                       </div>
                     </div>
@@ -325,9 +553,14 @@ export function GamePage() {
             </div>
 
             {/* Countdown */}
-            <div className="text-center">
-              <p className="text-xl text-gray-300">
-                Next round starts in: <strong className="text-yellow-400 text-2xl">{countdown}s</strong>
+            <div style={{ marginTop: '2rem' }}>
+              <p 
+                style={{
+                  fontSize: 'clamp(1.2rem, 3vw, 1.5rem)',
+                  color: '#f5f5dc'
+                }}
+              >
+                Next round starts in <strong style={{ color: '#ff8c42' }}>{countdown}s</strong>
               </p>
             </div>
           </div>
@@ -335,22 +568,57 @@ export function GamePage() {
 
         {/* Accuse Mode */}
         {gameState.status === 'accusing' && (
-          <div className="mb-8 bg-gray-800 rounded-xl p-6 shadow-xl">
-            <h2 className="text-2xl font-bold text-center mb-6 text-red-400">Accusation Phase!</h2>
+          <div style={{ textAlign: 'center' }}>
+            <h2 
+              style={{
+                fontSize: 'clamp(1.5rem, 4vw, 2rem)',
+                fontWeight: 'bold',
+                color: '#f5f5dc',
+                marginBottom: '2rem'
+              }}
+            >
+              Accusation Phase!
+            </h2>
             
             {roleAssignment.role === 'spy' ? (
               // Spy: Guess the location
               <div>
-                <p className="text-lg text-gray-300 mb-4 text-center">
+                <p 
+                  style={{
+                    fontSize: 'clamp(1.2rem, 3vw, 1.5rem)',
+                    color: '#f5f5dc',
+                    marginBottom: '2rem'
+                  }}
+                >
                   Guess the location to win 3 points!
                 </p>
                 {!gameState.accuseMode?.spyLocationGuess && (
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  <div 
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+                      gap: '1rem',
+                      maxWidth: '600px',
+                      margin: '0 auto'
+                    }}
+                  >
                     {SPYFALL_LOCATIONS.map(loc => (
                       <button
                         key={loc.name}
                         onClick={() => handleSpyGuess(loc.name)}
-                        className="px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                        style={{
+                          padding: '1rem',
+                          fontSize: 'clamp(1rem, 2vw, 1.2rem)',
+                          fontWeight: 'bold',
+                          backgroundColor: '#ff8c42',
+                          color: '#f5f5dc',
+                          border: 'none',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          transition: 'background-color 0.2s'
+                        }}
+                        onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#ff9f66'}
+                        onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#ff8c42'}
                       >
                         {loc.name}
                       </button>
@@ -358,7 +626,12 @@ export function GamePage() {
                   </div>
                 )}
                 {gameState.accuseMode?.spyLocationGuess && (
-                  <p className="text-center text-green-400 text-xl">
+                  <p 
+                    style={{
+                      fontSize: 'clamp(1.2rem, 3vw, 1.5rem)',
+                      color: '#f5f5dc'
+                    }}
+                  >
                     ✓ You've submitted your guess. Waiting for others...
                   </p>
                 )}
@@ -366,18 +639,44 @@ export function GamePage() {
             ) : (
               // Civilian: Vote for who they think is the spy
               <div>
-                <p className="text-lg text-gray-300 mb-4 text-center">
+                <p 
+                  style={{
+                    fontSize: 'clamp(1.2rem, 3vw, 1.5rem)',
+                    color: '#f5f5dc',
+                    marginBottom: '2rem'
+                  }}
+                >
                   Vote for who you think is the spy!
                 </p>
                 {!gameState.accuseMode?.playerVotes[currentPlayer?.id || ''] && (
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  <div 
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+                      gap: '1rem',
+                      maxWidth: '600px',
+                      margin: '0 auto'
+                    }}
+                  >
                     {gameState.players
                       .filter(p => p.id !== currentPlayer?.id)
                       .map(player => (
                         <button
                           key={player.id}
                           onClick={() => handlePlayerVote(player.id)}
-                          className="px-4 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
+                          style={{
+                            padding: '1rem',
+                            fontSize: 'clamp(1rem, 2vw, 1.2rem)',
+                            fontWeight: 'bold',
+                            backgroundColor: '#ff8c42',
+                            color: '#f5f5dc',
+                            border: 'none',
+                            borderRadius: '8px',
+                            cursor: 'pointer',
+                            transition: 'background-color 0.2s'
+                          }}
+                          onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#ff9f66'}
+                          onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#ff8c42'}
                         >
                           {player.name}
                         </button>
@@ -385,7 +684,12 @@ export function GamePage() {
                   </div>
                 )}
                 {gameState.accuseMode?.playerVotes[currentPlayer?.id || ''] && (
-                  <p className="text-center text-green-400 text-xl">
+                  <p 
+                    style={{
+                      fontSize: 'clamp(1.2rem, 3vw, 1.5rem)',
+                      color: '#f5f5dc'
+                    }}
+                  >
                     ✓ You've cast your vote. Waiting for others...
                   </p>
                 )}
@@ -394,26 +698,26 @@ export function GamePage() {
           </div>
         )}
 
-        {/* Player Scores */}
-        <div className="mt-8 bg-gray-800 rounded-lg p-6">
-          <h3 className="text-xl font-semibold mb-4">Scores</h3>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {gameState.players.map(player => (
-              <div key={player.id} className={`p-4 rounded-lg ${player.id === currentPlayer?.id ? 'bg-blue-900/50 border-2 border-blue-500' : 'bg-gray-700'}`}>
-                <div className="font-semibold text-white">{player.name}</div>
-                <div className="text-2xl font-bold text-yellow-400">{player.score || 0}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-
         {/* Back Button */}
-        <div className="mt-8 text-center">
+        <div style={{ marginTop: '3rem', textAlign: 'center' }}>
           <button
             onClick={() => window.location.href = '/'}
-            className="inline-flex items-center px-6 py-3 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              padding: '0.75rem 1.5rem',
+              fontSize: '1rem',
+              backgroundColor: 'rgba(255, 255, 255, 0.1)',
+              color: '#f5f5dc',
+              border: '1px solid rgba(255, 140, 66, 0.3)',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              transition: 'background-color 0.2s'
+            }}
+            onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'}
+            onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'}
           >
-            <ArrowLeft className="w-5 h-5 mr-2" />
+            <ArrowLeft style={{ width: '1.25rem', height: '1.25rem', marginRight: '0.5rem' }} />
             Leave Game
           </button>
         </div>

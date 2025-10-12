@@ -43,7 +43,7 @@ export class TestPlayer {
   }
 
   async acknowledgeRole(): Promise<void> {
-    const ackButton = this.page.locator('button:has-text("I Understand")');
+    const ackButton = this.page.locator('button:has-text("Ready")');
     await ackButton.waitFor({ state: 'visible', timeout: 5000 });
     await ackButton.click();
     console.log(`✅ [${this.name}] acknowledged role`);
@@ -60,7 +60,8 @@ export class TestPlayer {
     }
     
     console.log(`👤 [${this.name}] is a CIVILIAN, getting location...`);
-    const locationElement = await this.page.locator('.text-4xl.font-bold.text-green-400').first();
+    // Look for location text in the YOUR LOCATION section
+    const locationElement = await this.page.getByText(/^[A-Z][a-zA-Z\s]+$/).filter({ hasNotText: 'YOUR LOCATION' }).filter({ hasNotText: 'Ready' }).filter({ hasNotText: 'Waiting' }).first();
     const location = await locationElement.textContent();
     console.log(`✅ [${this.name}] Location: ${location?.trim()}`);
     
@@ -71,8 +72,8 @@ export class TestPlayer {
   }
 
   async clickNext(): Promise<void> {
-    await this.page.waitForSelector('button:has-text("Next")', { timeout: 5000 });
-    await this.page.click('button:has-text("Next")');
+    await this.page.waitForSelector('button:has-text("Done")', { timeout: 5000 });
+    await this.page.click('button:has-text("Done")');
     console.log(`✅ [${this.name}] asked their question`);
   }
 
@@ -96,7 +97,11 @@ export class TestPlayer {
   }
 
   async waitForQuestionRound(): Promise<void> {
-    await this.page.waitForSelector('text=Question Round', { timeout: 10000 });
+    // Wait for either "Ask a question" or "asking question" text which indicates the round has started
+    await Promise.race([
+      this.page.waitForSelector('text=Ask a question', { timeout: 10000 }),
+      this.page.waitForSelector('text=asking question', { timeout: 10000 })
+    ]);
   }
 
   async waitForRoundSummary(): Promise<void> {
@@ -104,24 +109,23 @@ export class TestPlayer {
   }
 
   async getScore(): Promise<number> {
-    // Find the "Points This Round" section and locate this player's card
-    const pointsSection = await this.page.locator('h3:has-text("Points This Round:")').locator('..').first();
-    const playerCards = await pointsSection.locator('.p-3.rounded-lg').all();
+    // Find the "Points This Round:" section
+    const pointsHeading = await this.page.getByText('Points This Round:');
     
-    for (const card of playerCards) {
-      const nameElement = await card.locator('.font-semibold').first();
-      const name = await nameElement.textContent();
-      
-      if (name?.trim() === this.name) {
-        const pointsElement = await card.locator('.text-2xl.font-bold.text-yellow-400').first();
-        const pointsText = await pointsElement.textContent();
-        
-        if (pointsText) {
-          const cleanText = pointsText.replace('+', '').trim();
-          const points = parseInt(cleanText, 10);
-          return isNaN(points) ? 0 : points;
-        }
-      }
+    // Get all player score cards (they're in a grid div after the heading)
+    // Wait a bit to ensure content is rendered
+    await this.page.waitForTimeout(500);
+    
+    // Find all divs that contain player names by looking for text content that matches
+    const allText = await this.page.locator('body').textContent();
+    
+    // Try to find the player's name and the score near it in the Points This Round section
+    // Look for pattern: playerName followed by +X or 0
+    const scoreMatch = allText?.match(new RegExp(`${this.name}\\s*\\+?(\\d+)`, 'i'));
+    
+    if (scoreMatch && scoreMatch[1]) {
+      const points = parseInt(scoreMatch[1], 10);
+      return isNaN(points) ? 0 : points;
     }
     
     return 0;

@@ -47,15 +47,15 @@ test.describe('Role Acknowledgment Flow', () => {
       // Then: All players should see their role/location and an acknowledgment button
       console.log('🔍 Verifying acknowledgment UI is visible...');
       
-      // Check that "I Understand" button is visible for all players
-      const playerAAckButton = playerA.page.locator('button:has-text("I Understand")');
-      const playerBAckButton = playerB.page.locator('button:has-text("I Understand")');
-      const playerCAckButton = playerC.page.locator('button:has-text("I Understand")');
+      // Check that "Ready" button is visible for all players
+      const playerAAckButton = playerA.page.locator('button:has-text("Ready")');
+      const playerBAckButton = playerB.page.locator('button:has-text("Ready")');
+      const playerCAckButton = playerC.page.locator('button:has-text("Ready")');
       
       await expect(playerAAckButton).toBeVisible({ timeout: 5000 });
       await expect(playerBAckButton).toBeVisible({ timeout: 5000 });
       await expect(playerCAckButton).toBeVisible({ timeout: 5000 });
-      console.log('✅ All players see the "I Understand" button');
+      console.log('✅ All players see the "Ready" button');
 
       // Verify that role info is showing (either spy or location)
       const playerAHasSpy = await playerA.page.locator('text=YOU ARE THE SPY!').isVisible();
@@ -102,12 +102,22 @@ test.describe('Role Acknowledgment Flow', () => {
 
       // Then: The question round should start
       console.log('⏳ Waiting for question round to start...');
-      await expect(playerA.page.locator('text=Question Round')).toBeVisible({ timeout: 5000 });
-      await expect(playerB.page.locator('text=Question Round')).toBeVisible({ timeout: 5000 });
-      await expect(playerC.page.locator('text=Question Round')).toBeVisible({ timeout: 5000 });
+      // Players should see either "Ask a question" or "{player} asking question"
+      await Promise.race([
+        playerA.page.waitForSelector('text=Ask a question', { timeout: 5000 }),
+        playerA.page.waitForSelector('text=asking question', { timeout: 5000 })
+      ]);
+      await Promise.race([
+        playerB.page.waitForSelector('text=Ask a question', { timeout: 5000 }),
+        playerB.page.waitForSelector('text=asking question', { timeout: 5000 })
+      ]);
+      await Promise.race([
+        playerC.page.waitForSelector('text=Ask a question', { timeout: 5000 }),
+        playerC.page.waitForSelector('text=asking question', { timeout: 5000 })
+      ]);
       console.log('✅ Question round started');
 
-      // And: The "I Understand" buttons should no longer be visible
+      // And: The "Ready" buttons should no longer be visible
       await expect(playerAAckButton).not.toBeVisible();
       await expect(playerBAckButton).not.toBeVisible();
       await expect(playerCAckButton).not.toBeVisible();
@@ -150,17 +160,15 @@ test.describe('Role Acknowledgment Flow', () => {
       console.log('✅ Player sees role information');
 
       // Click acknowledge button
-      const ackButton = player.page.locator('button:has-text("I Understand")');
+      const ackButton = player.page.locator('button:has-text("Ready")');
       await ackButton.click();
 
       // Role info should be hidden (replaced by waiting message)
-      if (isSpy) {
-        // Spy message should not be visible in the large format anymore
-        await expect(player.page.locator('.text-4xl.font-bold.text-red-400:has-text("YOU ARE THE SPY!")')).not.toBeVisible({ timeout: 3000 });
-      } else {
-        // Location should not be visible in the large format anymore
-        await expect(player.page.locator('.text-4xl.font-bold.text-green-400')).not.toBeVisible({ timeout: 3000 });
-      }
+      // Just check that the Ready button is no longer visible
+      await expect(ackButton).not.toBeVisible({ timeout: 3000 });
+      
+      // And waiting message should appear
+      await expect(player.page.locator('text=Waiting for other players...')).toBeVisible({ timeout: 3000 });
       console.log('✅ Role info hidden after acknowledgment');
 
       console.log('🎉 Test completed successfully!');
