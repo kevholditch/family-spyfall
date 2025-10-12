@@ -258,7 +258,7 @@ export class GameManager {
     });
 
     const civilians = game.players.filter(p => p.role === 'civilian');
-    const majorityVotes = Math.ceil(civilians.length / 2);
+    const majorityVotes = Math.floor(civilians.length / 2) + 1;
     const civiliansWon = mostAccusedId === spy.id && maxVotes >= majorityVotes;
 
     // Track points awarded this round

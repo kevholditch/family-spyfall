@@ -752,5 +752,90 @@ describe('GameManager', () => {
       expect(updatedGame.players.find(p => p.id === civilians[1].id)!.score).toBe(1);
       expect(updatedGame.players.find(p => p.id === civilians[2].id)!.score).toBe(0);
     });
+
+    it('should NOT allow exactly 50% of civilians to win (2 players, 1 votes correctly)', () => {
+      const gameId = gameManager.createGame();
+      // Add 3 players total (2 civilians, 1 spy)
+      const alice = gameManager.addPlayer(gameId, 'Alice', true);
+      const bob = gameManager.addPlayer(gameId, 'Bob');
+      const charlie = gameManager.addPlayer(gameId, 'Charlie');
+      
+      gameManager.startRound(gameId);
+      
+      // Acknowledge all players to transition to playing
+      if (alice) gameManager.acknowledgeRoleInfo(gameId, alice.playerId);
+      if (bob) gameManager.acknowledgeRoleInfo(gameId, bob.playerId);
+      if (charlie) gameManager.acknowledgeRoleInfo(gameId, charlie.playerId);
+      
+      const game = gameManager.getGame(gameId)!;
+      
+      // Complete question round
+      game.players.forEach(player => gameManager.nextTurn(gameId, player.id));
+      
+      const spy = game.players.find(p => p.role === 'spy')!;
+      const civilians = game.players.filter(p => p.role === 'civilian');
+      
+      expect(civilians.length).toBe(2); // Verify we have 2 civilians
+      
+      // Spy guesses wrong location
+      gameManager.submitSpyGuess(gameId, spy.id, 'Wrong Location');
+      
+      // Only 1 out of 2 civilians votes for spy (exactly 50%, should NOT be a win)
+      gameManager.submitPlayerVote(gameId, civilians[0].id, spy.id);
+      gameManager.submitPlayerVote(gameId, civilians[1].id, civilians[0].id); // votes for wrong person
+      
+      const updatedGame = gameManager.getGame(gameId)!;
+      
+      // Game should continue (nobody wins with exactly 50%)
+      expect(updatedGame.status).toBe('playing');
+      expect(updatedGame.roundResult).toBeUndefined();
+      
+      // No points awarded since nobody won
+      updatedGame.players.forEach(p => {
+        expect(p.score).toBe(0);
+      });
+    });
+
+    it('should require both civilians to vote correctly when there are 2 civilians', () => {
+      const gameId = gameManager.createGame();
+      // Add 3 players total (2 civilians, 1 spy)
+      const alice = gameManager.addPlayer(gameId, 'Alice', true);
+      const bob = gameManager.addPlayer(gameId, 'Bob');
+      const charlie = gameManager.addPlayer(gameId, 'Charlie');
+      
+      gameManager.startRound(gameId);
+      
+      // Acknowledge all players to transition to playing
+      if (alice) gameManager.acknowledgeRoleInfo(gameId, alice.playerId);
+      if (bob) gameManager.acknowledgeRoleInfo(gameId, bob.playerId);
+      if (charlie) gameManager.acknowledgeRoleInfo(gameId, charlie.playerId);
+      
+      const game = gameManager.getGame(gameId)!;
+      
+      // Complete question round
+      game.players.forEach(player => gameManager.nextTurn(gameId, player.id));
+      
+      const spy = game.players.find(p => p.role === 'spy')!;
+      const civilians = game.players.filter(p => p.role === 'civilian');
+      
+      expect(civilians.length).toBe(2); // Verify we have 2 civilians
+      
+      // Spy guesses wrong location
+      gameManager.submitSpyGuess(gameId, spy.id, 'Wrong Location');
+      
+      // Both civilians vote for spy (100%, should be a win)
+      gameManager.submitPlayerVote(gameId, civilians[0].id, spy.id);
+      gameManager.submitPlayerVote(gameId, civilians[1].id, spy.id);
+      
+      const updatedGame = gameManager.getGame(gameId)!;
+      
+      // Civilians should win
+      expect(updatedGame.status).toBe('round_summary');
+      expect(updatedGame.roundResult?.civiliansWon).toBe(true);
+      
+      // Both civilians get points
+      expect(updatedGame.players.find(p => p.id === civilians[0].id)!.score).toBe(1);
+      expect(updatedGame.players.find(p => p.id === civilians[1].id)!.score).toBe(1);
+    });
   });
 });

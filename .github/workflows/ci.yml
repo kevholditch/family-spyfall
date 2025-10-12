@@ -49,7 +49,7 @@ jobs:
       run: make test-server
       
     - name: Install Playwright browsers
-      run: pnpm exec playwright install --with-deps chromium
+      run: pnpm exec playwright install --with-deps
       working-directory: apps/web
       
     - name: Run E2E tests
