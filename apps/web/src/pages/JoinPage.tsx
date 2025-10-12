@@ -177,10 +177,38 @@ export function JoinPage() {
   
   if (!isConnected) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
-        <div className="bg-white rounded-lg shadow-md p-6 max-w-md w-full text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Connecting to server...</p>
+      <div 
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100vh',
+          backgroundColor: '#1e3a5f',
+          backgroundImage: `
+            radial-gradient(circle at 25% 25%, rgba(255, 255, 255, 0.02) 0%, transparent 50%),
+            radial-gradient(circle at 75% 75%, rgba(255, 255, 255, 0.02) 0%, transparent 50%),
+            url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.03'/%3E%3C/svg%3E")
+          `,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '1rem'
+        }}
+      >
+        <div style={{ textAlign: 'center' }}>
+          <div 
+            style={{
+              width: '4rem',
+              height: '4rem',
+              border: '4px solid rgba(255, 140, 66, 0.3)',
+              borderTop: '4px solid #ff8c42',
+              borderRadius: '50%',
+              animation: 'spin 1s linear infinite',
+              margin: '0 auto 1.5rem'
+            }}
+          ></div>
+          <p style={{ color: '#f5f5dc', fontSize: '1.2rem' }}>Connecting to server...</p>
         </div>
       </div>
     );
@@ -188,16 +216,46 @@ export function JoinPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
-        <div className="bg-white rounded-lg shadow-md p-6 max-w-md w-full text-center">
-          <p className="text-red-600 mb-4">{error}</p>
+      <div 
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100vh',
+          backgroundColor: '#1e3a5f',
+          backgroundImage: `
+            radial-gradient(circle at 25% 25%, rgba(255, 255, 255, 0.02) 0%, transparent 50%),
+            radial-gradient(circle at 75% 75%, rgba(255, 255, 255, 0.02) 0%, transparent 50%),
+            url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.03'/%3E%3C/svg%3E")
+          `,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '1rem'
+        }}
+      >
+        <div style={{ textAlign: 'center', maxWidth: '400px' }}>
+          <p style={{ color: '#f5f5dc', fontSize: '1.2rem', marginBottom: '2rem' }}>{error}</p>
           <button
             onClick={() => {
               setHasJoined(false);
               setIsJoining(false);
               window.location.href = '/';
             }}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            style={{
+              padding: '0.75rem 2rem',
+              fontSize: '1.1rem',
+              fontWeight: 'bold',
+              backgroundColor: '#ff8c42',
+              color: '#f5f5dc',
+              border: 'none',
+              borderRadius: '10px',
+              cursor: 'pointer',
+              transition: 'background-color 0.2s'
+            }}
+            onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#ff9f66'}
+            onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#ff8c42'}
           >
             Go Home
           </button>
@@ -208,12 +266,42 @@ export function JoinPage() {
 
   if (!gameId) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
-        <div className="bg-white rounded-lg shadow-md p-6 max-w-md w-full text-center">
-          <p className="text-red-600 mb-4">Invalid game ID</p>
+      <div 
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100vh',
+          backgroundColor: '#1e3a5f',
+          backgroundImage: `
+            radial-gradient(circle at 25% 25%, rgba(255, 255, 255, 0.02) 0%, transparent 50%),
+            radial-gradient(circle at 75% 75%, rgba(255, 255, 255, 0.02) 0%, transparent 50%),
+            url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.03'/%3E%3C/svg%3E")
+          `,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '1rem'
+        }}
+      >
+        <div style={{ textAlign: 'center', maxWidth: '400px' }}>
+          <p style={{ color: '#f5f5dc', fontSize: '1.2rem', marginBottom: '2rem' }}>Invalid game ID</p>
           <button
             onClick={() => window.location.href = '/'}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            style={{
+              padding: '0.75rem 2rem',
+              fontSize: '1.1rem',
+              fontWeight: 'bold',
+              backgroundColor: '#ff8c42',
+              color: '#f5f5dc',
+              border: 'none',
+              borderRadius: '10px',
+              cursor: 'pointer',
+              transition: 'background-color 0.2s'
+            }}
+            onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#ff9f66'}
+            onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#ff8c42'}
           >
             Go Home
           </button>
@@ -230,30 +318,80 @@ export function JoinPage() {
 
   if (hasJoined) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
-        <div className="bg-white rounded-lg shadow-md p-8 max-w-md w-full text-center">
-          <div className="mb-6">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Users className="w-8 h-8 text-green-600" />
+      <div 
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100vh',
+          backgroundColor: '#1e3a5f',
+          backgroundImage: `
+            radial-gradient(circle at 25% 25%, rgba(255, 255, 255, 0.02) 0%, transparent 50%),
+            radial-gradient(circle at 75% 75%, rgba(255, 255, 255, 0.02) 0%, transparent 50%),
+            url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.03'/%3E%3C/svg%3E")
+          `,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '1rem'
+        }}
+      >
+        <div style={{ textAlign: 'center', maxWidth: '500px' }}>
+          <div style={{ marginBottom: '2rem' }}>
+            <div 
+              style={{
+                width: '4rem',
+                height: '4rem',
+                backgroundColor: 'rgba(255, 140, 66, 0.2)',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 1.5rem'
+              }}
+            >
+              <Users style={{ width: '2rem', height: '2rem', color: '#ff8c42' }} />
             </div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">
+            <h1 
+              style={{
+                fontSize: 'clamp(1.5rem, 4vw, 2rem)',
+                fontWeight: 'bold',
+                color: '#f5f5dc',
+                marginBottom: '1rem'
+              }}
+            >
               Welcome to the game, {playerName}!
             </h1>
-            <p className="text-gray-600 mb-6">
+            <p 
+              style={{
+                fontSize: 'clamp(1rem, 2vw, 1.2rem)',
+                color: '#f5f5dc',
+                opacity: 0.9,
+                marginBottom: '2rem'
+              }}
+            >
               Waiting for game to start, please stand by...
             </p>
           </div>
           
-          <div className="space-y-4">
-            <div className="flex items-center justify-center space-x-2 text-sm text-gray-500">
-              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#f5f5dc', opacity: 0.8 }}>
+              <div 
+                style={{
+                  width: '0.5rem',
+                  height: '0.5rem',
+                  backgroundColor: '#ff8c42',
+                  borderRadius: '50%',
+                  animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+                }}
+              ></div>
               <span>Connected to game {gameId}</span>
             </div>
             
-            <div className="text-xs text-gray-400">
+            <div style={{ fontSize: '0.875rem', color: '#f5f5dc', opacity: 0.6 }}>
               The host will start the game when ready
             </div>
-            
           </div>
         </div>
       </div>
@@ -261,25 +399,80 @@ export function JoinPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-md p-6 max-w-md w-full">
-        <div className="mb-6">
+    <div 
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100vw',
+        height: '100vh',
+        backgroundColor: '#1e3a5f',
+        backgroundImage: `
+          radial-gradient(circle at 25% 25%, rgba(255, 255, 255, 0.02) 0%, transparent 50%),
+          radial-gradient(circle at 75% 75%, rgba(255, 255, 255, 0.02) 0%, transparent 50%),
+          url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.03'/%3E%3C/svg%3E")
+        `,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '1rem'
+      }}
+    >
+      <div style={{ maxWidth: '400px', width: '100%' }}>
+        <div style={{ marginBottom: '2rem' }}>
           <button
             onClick={() => window.location.href = '/'}
-            className="flex items-center text-blue-600 hover:text-blue-800 mb-4"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              color: '#ff8c42',
+              backgroundColor: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: '1rem',
+              marginBottom: '1.5rem',
+              transition: 'opacity 0.2s'
+            }}
+            onMouseOver={(e) => e.currentTarget.style.opacity = '0.8'}
+            onMouseOut={(e) => e.currentTarget.style.opacity = '1'}
           >
-            <ArrowLeft className="w-4 h-4 mr-2" />
+            <ArrowLeft style={{ width: '1rem', height: '1rem', marginRight: '0.5rem' }} />
             Back to Home
           </button>
-          <h1 className="text-2xl font-bold text-center">Join Game</h1>
-          <p className="text-center text-gray-600 mt-2">
+          <h1 
+            style={{
+              fontSize: 'clamp(1.5rem, 4vw, 2rem)',
+              fontWeight: 'bold',
+              textAlign: 'center',
+              color: '#f5f5dc',
+              marginBottom: '0.5rem'
+            }}
+          >
+            Join Game
+          </h1>
+          <p 
+            style={{
+              textAlign: 'center',
+              color: '#f5f5dc',
+              opacity: 0.8
+            }}
+          >
             Game ID: <strong>{gameId}</strong>
           </p>
         </div>
         
-        <div className="space-y-4">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           <div>
-            <label htmlFor="playerName" className="block text-sm font-medium text-gray-700 mb-2">
+            <label 
+              htmlFor="playerName" 
+              style={{
+                display: 'block',
+                fontSize: '0.875rem',
+                fontWeight: '500',
+                color: '#f5f5dc',
+                marginBottom: '0.5rem'
+              }}
+            >
               Your Name
             </label>
             <input
@@ -288,22 +481,59 @@ export function JoinPage() {
               value={playerName}
               onChange={(e) => setPlayerName(e.target.value)}
               placeholder="Enter your name"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              style={{
+                width: '100%',
+                padding: '0.75rem 1rem',
+                border: '2px solid rgba(255, 140, 66, 0.3)',
+                borderRadius: '8px',
+                fontSize: '1rem',
+                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                color: '#f5f5dc',
+                outline: 'none',
+                transition: 'border-color 0.2s'
+              }}
               maxLength={20}
               onKeyPress={(e) => {
                 if (e.key === 'Enter') {
                   handleJoinGame();
                 }
               }}
+              onFocus={(e) => e.currentTarget.style.borderColor = '#ff8c42'}
+              onBlur={(e) => e.currentTarget.style.borderColor = 'rgba(255, 140, 66, 0.3)'}
             />
           </div>
 
           <button
             onClick={handleJoinGame}
             disabled={!playerName.trim() || isJoining}
-            className="w-full flex items-center justify-center px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+            style={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '0.75rem 1rem',
+              fontSize: '1.1rem',
+              fontWeight: 'bold',
+              backgroundColor: !playerName.trim() || isJoining ? 'rgba(100, 100, 100, 0.5)' : '#ff8c42',
+              color: '#f5f5dc',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: !playerName.trim() || isJoining ? 'not-allowed' : 'pointer',
+              transition: 'background-color 0.2s',
+              opacity: !playerName.trim() || isJoining ? 0.6 : 1
+            }}
+            onMouseOver={(e) => {
+              if (playerName.trim() && !isJoining) {
+                e.currentTarget.style.backgroundColor = '#ff9f66';
+              }
+            }}
+            onMouseOut={(e) => {
+              if (playerName.trim() && !isJoining) {
+                e.currentTarget.style.backgroundColor = '#ff8c42';
+              }
+            }}
           >
-            <Users className="w-5 h-5 mr-2" />
+            <Users style={{ width: '1.25rem', height: '1.25rem', marginRight: '0.5rem' }} />
             {isJoining ? 'Joining...' : 'Join Game'}
           </button>
         </div>
