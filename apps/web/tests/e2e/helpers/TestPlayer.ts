@@ -36,9 +36,10 @@ export class TestPlayer {
   }
 
   async waitForRole(): Promise<void> {
+    // Wait for either spy image or any location image to appear
     await Promise.race([
-      this.page.waitForSelector('text=YOU ARE THE SPY!', { timeout: 10000 }),
-      this.page.waitForSelector('text=YOUR LOCATION', { timeout: 10000 })
+      this.page.waitForSelector('img[src="/assets/spy.png"]', { timeout: 10000 }),
+      this.page.waitForSelector('img[src^="/assets/"][src$=".png"]:not([src="/assets/spy.png"])', { timeout: 10000 })
     ]);
   }
 
@@ -52,7 +53,9 @@ export class TestPlayer {
   async getRoleInfo(): Promise<RoleInfo> {
     console.log(`🔍 [${this.name}] Getting role info...`);
     
-    const isSpy = await this.page.locator('text=YOU ARE THE SPY!').isVisible();
+    // Check if spy image is visible
+    const spyImage = this.page.locator('img[src="/assets/spy.png"]');
+    const isSpy = await spyImage.isVisible();
     
     if (isSpy) {
       console.log(`✅ [${this.name}] is a SPY`);
@@ -60,14 +63,14 @@ export class TestPlayer {
     }
     
     console.log(`👤 [${this.name}] is a CIVILIAN, getting location...`);
-    // Look for location text in the YOUR LOCATION section
-    const locationElement = await this.page.getByText(/^[A-Z][a-zA-Z\s]+$/).filter({ hasNotText: 'YOUR LOCATION' }).filter({ hasNotText: 'Ready' }).filter({ hasNotText: 'Waiting' }).first();
-    const location = await locationElement.textContent();
-    console.log(`✅ [${this.name}] Location: ${location?.trim()}`);
+    // Look for location image (any asset image that's not spy.png)
+    const locationImage = this.page.locator('img[src^="/assets/"][src$=".png"]:not([src="/assets/spy.png"])');
+    const alt = await locationImage.getAttribute('alt');
+    console.log(`✅ [${this.name}] Location: ${alt}`);
     
     return { 
       isSpy: false, 
-      location: location?.trim() 
+      location: alt || undefined
     };
   }
 

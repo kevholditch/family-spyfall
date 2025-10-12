@@ -57,16 +57,16 @@ test.describe('Role Acknowledgment Flow', () => {
       await expect(playerCAckButton).toBeVisible({ timeout: 5000 });
       console.log('✅ All players see the "Ready" button');
 
-      // Verify that role info is showing (either spy or location)
-      const playerAHasSpy = await playerA.page.locator('text=YOU ARE THE SPY!').isVisible();
-      const playerBHasSpy = await playerB.page.locator('text=YOU ARE THE SPY!').isVisible();
-      const playerCHasSpy = await playerC.page.locator('text=YOU ARE THE SPY!').isVisible();
+      // Verify that role info is showing (either spy image or location image)
+      const playerAHasSpy = await playerA.page.locator('img[src="/assets/spy.png"]').isVisible();
+      const playerBHasSpy = await playerB.page.locator('img[src="/assets/spy.png"]').isVisible();
+      const playerCHasSpy = await playerC.page.locator('img[src="/assets/spy.png"]').isVisible();
       
-      const playerAHasLocation = await playerA.page.locator('text=YOUR LOCATION').isVisible();
-      const playerBHasLocation = await playerB.page.locator('text=YOUR LOCATION').isVisible();
-      const playerCHasLocation = await playerC.page.locator('text=YOUR LOCATION').isVisible();
+      const playerAHasLocation = await playerA.page.locator('img[src^="/assets/"][src$=".png"]:not([src="/assets/spy.png"])').isVisible();
+      const playerBHasLocation = await playerB.page.locator('img[src^="/assets/"][src$=".png"]:not([src="/assets/spy.png"])').isVisible();
+      const playerCHasLocation = await playerC.page.locator('img[src^="/assets/"][src$=".png"]:not([src="/assets/spy.png"])').isVisible();
       
-      // Each player should have either spy or location info
+      // Each player should have either spy or location image
       expect(playerAHasSpy || playerAHasLocation).toBeTruthy();
       expect(playerBHasSpy || playerBHasLocation).toBeTruthy();
       expect(playerCHasSpy || playerCHasLocation).toBeTruthy();
@@ -143,24 +143,26 @@ test.describe('Role Acknowledgment Flow', () => {
       await host.goToHome();
       const gameId = await host.createGame();
 
-      // Create and join a single player for simplicity
-      const player = await setup.createPlayer('test player');
-      await player.joinGame(gameId);
-      await host.waitForPlayersVisible(['test player']);
+      // Create and join two players (need at least 2 for waiting message to appear)
+      const playerA = await setup.createPlayer('player a');
+      const playerB = await setup.createPlayer('player b');
+      await playerA.joinGame(gameId);
+      await playerB.joinGame(gameId);
+      await host.waitForPlayersVisible(['player a', 'player b']);
 
       // Start round
       await host.startRound();
-      await player.waitForGamePage();
-      await player.waitForRole();
+      await playerA.waitForGamePage();
+      await playerA.waitForRole();
 
-      // Check if player sees role info
-      const isSpy = await player.page.locator('text=YOU ARE THE SPY!').isVisible();
-      const hasLocation = await player.page.locator('text=YOUR LOCATION').isVisible();
+      // Check if player sees role info (either spy image or location image)
+      const isSpy = await playerA.page.locator('img[src="/assets/spy.png"]').isVisible();
+      const hasLocation = await playerA.page.locator('img[src^="/assets/"][src$=".png"]:not([src="/assets/spy.png"])').isVisible();
       expect(isSpy || hasLocation).toBeTruthy();
       console.log('✅ Player sees role information');
 
-      // Click acknowledge button
-      const ackButton = player.page.locator('button:has-text("Ready")');
+      // Click acknowledge button for player A
+      const ackButton = playerA.page.locator('button:has-text("Ready")');
       await ackButton.click();
 
       // Role info should be hidden (replaced by waiting message)
@@ -168,7 +170,7 @@ test.describe('Role Acknowledgment Flow', () => {
       await expect(ackButton).not.toBeVisible({ timeout: 3000 });
       
       // And waiting message should appear
-      await expect(player.page.locator('text=Waiting for other players...')).toBeVisible({ timeout: 3000 });
+      await expect(playerA.page.locator('text=Waiting for other players...')).toBeVisible({ timeout: 3000 });
       console.log('✅ Role info hidden after acknowledgment');
 
       console.log('🎉 Test completed successfully!');
