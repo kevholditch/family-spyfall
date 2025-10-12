@@ -208,57 +208,37 @@ export function GamePage() {
               <div>
                 {roleAssignment.role === 'spy' ? (
                   <div>
-                    <h2 
+                    <img 
+                      src="/assets/spy.png" 
+                      alt="Spy"
                       style={{
-                        fontSize: 'clamp(2rem, 5vw, 3rem)',
-                        fontWeight: 'bold',
-                        color: '#f5f5dc',
-                        marginBottom: '2rem'
-                      }}
-                    >
-                      YOU ARE THE SPY!
-                    </h2>
-                    <p 
-                      style={{
-                        fontSize: 'clamp(1.2rem, 3vw, 1.5rem)',
-                        color: '#f5f5dc',
+                        maxWidth: '100%',
+                        maxHeight: '60vh',
+                        width: 'auto',
+                        height: 'auto',
+                        objectFit: 'contain',
                         marginBottom: '3rem',
-                        lineHeight: '1.6'
+                        borderRadius: '12px',
+                        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)'
                       }}
-                    >
-                      Your mission is to figure out the secret location without revealing that you're the spy.
-                    </p>
+                    />
                   </div>
                 ) : (
                   <div>
-                    <h2 
+                    <img 
+                      src={`/${SPYFALL_LOCATIONS.find(loc => loc.name === roleAssignment.location)?.image || 'assets/default.png'}`}
+                      alt={roleAssignment.location}
                       style={{
-                        fontSize: 'clamp(1.5rem, 4vw, 2rem)',
-                        fontWeight: 'bold',
-                        color: '#f5f5dc',
-                        marginBottom: '2rem'
-                      }}
-                    >
-                      YOUR LOCATION
-                    </h2>
-                    <div 
-                      style={{
-                        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                        maxWidth: '100%',
+                        maxHeight: '60vh',
+                        width: 'auto',
+                        height: 'auto',
+                        objectFit: 'contain',
+                        marginBottom: '3rem',
                         borderRadius: '12px',
-                        padding: '2rem',
-                        marginBottom: '3rem'
+                        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)'
                       }}
-                    >
-                      <h3 
-                        style={{
-                          fontSize: 'clamp(2rem, 5vw, 3rem)',
-                          fontWeight: 'bold',
-                          color: '#f5f5dc'
-                        }}
-                      >
-                        {roleAssignment.location}
-                      </h3>
-                    </div>
+                    />
                   </div>
                 )}
                 <button

@@ -1,4 +1,3 @@
-import React from 'react';
 import { RoleAssignment, SPYFALL_LOCATIONS } from '../types';
 import { Eye, EyeOff } from 'lucide-react';
 
@@ -48,31 +47,16 @@ export function RoleDisplay({ roleAssignment, className = '' }: RoleDisplayProps
 }
 
 export function LocationList({ className = '' }: { className?: string }) {
-  const locationsByCategory = SPYFALL_LOCATIONS.reduce((acc, location) => {
-    if (!acc[location.category]) {
-      acc[location.category] = [];
-    }
-    acc[location.category].push(location.name);
-    return acc;
-  }, {} as Record<string, string[]>);
-
   return (
     <div className={`bg-white rounded-lg shadow-md p-4 ${className}`}>
       <h3 className="text-lg font-semibold mb-4">All Possible Locations</h3>
-      <div className="space-y-4">
-        {Object.entries(locationsByCategory).map(([category, locations]) => (
-          <div key={category}>
-            <h4 className="font-medium text-gray-700 mb-2">{category}</h4>
-            <div className="grid grid-cols-2 gap-2">
-              {locations.map((location) => (
-                <div
-                  key={location}
-                  className="px-3 py-2 bg-gray-100 rounded text-sm text-gray-700"
-                >
-                  {location}
-                </div>
-              ))}
-            </div>
+      <div className="grid grid-cols-2 gap-2">
+        {SPYFALL_LOCATIONS.map((location) => (
+          <div
+            key={location.name}
+            className="px-3 py-2 bg-gray-100 rounded text-sm text-gray-700"
+          >
+            {location.name}
           </div>
         ))}
       </div>

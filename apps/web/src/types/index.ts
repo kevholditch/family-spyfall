@@ -68,36 +68,33 @@ export interface SocketEvents {
 
 export interface Location {
   name: string;
-  category: string;
+  image: string;
 }
 
 export const SPYFALL_LOCATIONS: Location[] = [
-  { name: 'Airplane', category: 'Transportation' },
-  { name: 'Bank', category: 'Business' },
-  { name: 'Beach', category: 'Leisure' },
-  { name: 'Casino', category: 'Entertainment' },
-  { name: 'Circus', category: 'Entertainment' },
-  { name: 'Corporate Party', category: 'Business' },
-  { name: 'Cruise Ship', category: 'Transportation' },
-  { name: 'Day Spa', category: 'Leisure' },
-  { name: 'Embassy', category: 'Government' },
-  { name: 'Hospital', category: 'Public Service' },
-  { name: 'Hotel', category: 'Business' },
-  { name: 'Military Base', category: 'Government' },
-  { name: 'Movie Studio', category: 'Entertainment' },
-  { name: 'Ocean Liner', category: 'Transportation' },
-  { name: 'Passenger Train', category: 'Transportation' },
-  { name: 'Pirate Ship', category: 'Transportation' },
-  { name: 'Polar Station', category: 'Research' },
-  { name: 'Police Station', category: 'Public Service' },
-  { name: 'Restaurant', category: 'Business' },
-  { name: 'School', category: 'Education' },
-  { name: 'Service Station', category: 'Business' },
-  { name: 'Space Station', category: 'Research' },
-  { name: 'Submarine', category: 'Transportation' },
-  { name: 'Supermarket', category: 'Business' },
-  { name: 'Theater', category: 'Entertainment' },
-  { name: 'University', category: 'Education' },
-  { name: 'Wedding', category: 'Social' },
-  { name: 'Zoo', category: 'Leisure' }
+  { name: 'Airplane', image: 'assets/airplane.png' },
+  { name: 'Bank', image: 'assets/bank.png' },
+  { name: 'Beach', image: 'assets/beach.png' },
+  { name: 'Casino', image: 'assets/casino.png' },
+  { name: 'Circus', image: 'assets/circus.png' },
+  { name: 'Party', image: 'assets/party.png' },
+  { name: 'Cruise Ship', image: 'assets/cruise ship.png' },
+  { name: 'Day Spa', image: 'assets/day spa.png' },
+  { name: 'Hospital', image: 'assets/hospital.png' },
+  { name: 'Hotel', image: 'assets/hotel.png' },
+  { name: 'Military Base', image: 'assets/military base.png' },
+  { name: 'Movie Studio', image: 'assets/movie studio.png' },
+  { name: 'Train', image: 'assets/train.png' },
+  { name: 'Pirate Ship', image: 'assets/pirate ship.png' },
+  { name: 'Science Lab', image: 'assets/science lab.png' },
+  { name: 'Police Station', image: 'assets/police station.png' },
+  { name: 'Restaurant', image: 'assets/restaurant.png' },
+  { name: 'School', image: 'assets/school.png' },
+  { name: 'Petrol Station', image: 'assets/petrol station.png' },
+  { name: 'Space Station', image: 'assets/space station.png' },
+  { name: 'Submarine', image: 'assets/submarine.png' },
+  { name: 'Supermarket', image: 'assets/supermarket.png' },
+  { name: 'Theater', image: 'assets/theater.png' },
+  { name: 'Wedding', image: 'assets/wedding.png' },
+  { name: 'Zoo', image: 'assets/zoo.png' }
 ];
