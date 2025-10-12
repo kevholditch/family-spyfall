@@ -302,6 +302,14 @@ export function GamePage() {
         {/* Question Phase */}
         {gameState.status === 'playing' && (
           <div style={{ textAlign: 'center' }}>
+            {(() => {
+              debugLog('🎮 CLIENT - Rendering playing phase UI:', {
+                status: gameState.status,
+                currentPlayerIndex: gameState.currentPlayerIndex,
+                isMyTurn
+              });
+              return null;
+            })()}
             {/* Top Info Bar */}
             <div 
               style={{
@@ -549,6 +557,14 @@ export function GamePage() {
         {/* Accuse Mode */}
         {gameState.status === 'accusing' && (
           <div style={{ textAlign: 'center' }}>
+            {(() => {
+              debugLog('🎮 CLIENT - Rendering accusing phase UI:', {
+                status: gameState.status,
+                hasSpyGuess: !!gameState.accuseMode?.spyLocationGuess,
+                hasVoted: !!gameState.accuseMode?.playerVotes[currentPlayer?.id || '']
+              });
+              return null;
+            })()}
             <h2 
               style={{
                 fontSize: 'clamp(1.5rem, 4vw, 2rem)',

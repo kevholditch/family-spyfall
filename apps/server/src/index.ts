@@ -528,6 +528,11 @@ io.on('connection', (socket) => {
 
     // Check if game transitioned back to playing (nobody won)
     if (game.status === 'playing') {
+      debugLog('🔄 SERVER - Nobody won! Transitioning back to playing:', {
+        roundNumber: game.roundNumber,
+        currentPlayerIndex: game.currentPlayerIndex,
+        gameId: currentGameId
+      });
       io.to(currentGameId).emit('game_update', {
         type: 'round_started',
         data: {
@@ -535,6 +540,7 @@ io.on('connection', (socket) => {
           currentPlayerIndex: game.currentPlayerIndex
         }
       });
+      debugLog('✅ SERVER - Emitted round_started event to all players');
     }
 
     // Check if results need to be sent

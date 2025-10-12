@@ -101,6 +101,12 @@ export function useGameState() {
           };
 
         case 'round_started':
+          debugLog('🎮 CLIENT - Processing round_started event:', {
+            previousStatus: prev?.status,
+            newStatus: 'playing',
+            roundNumber: update.data.roundNumber,
+            currentPlayerIndex: update.data.currentPlayerIndex
+          });
           return {
             ...prev,
             status: 'playing',
