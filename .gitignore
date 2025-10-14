@@ -157,3 +157,7 @@ tmp/
 
 # Debug screenshots
 debug-*.png
+
+# Local deployment setup (contains SSL certificates and sensitive data)
+local-setup/
+christmas-setup/
