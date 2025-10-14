@@ -11,19 +11,27 @@ import { debugLog, debugError, infoLog, errorLog } from './utils/debug';
 
 dotenv.config();
 
+
 const ROUND_SUMMARY_TIMEOUT = parseInt(process.env.ROUND_SUMMARY_TIMEOUT || '60000', 10);
 
 const app = express();
 const server = createServer(app);
+// Build CORS origins from environment variables
+const corsOrigins = [
+  'http://localhost:5173',
+  /^http:\/\/192\.168\.\d+\.\d+:5173$/, // Allow any 192.168.x.x:5173
+  /^http:\/\/10\.\d+\.\d+\.\d+:5173$/,  // Allow any 10.x.x.x:5173
+  /^http:\/\/172\.(1[6-9]|2[0-9]|3[0-1])\.\d+\.\d+:5173$/ // Allow any 172.16-31.x.x:5173
+];
+
+// Add production domain from environment variable if provided
+if (process.env.ALLOWED_ORIGIN) {
+  corsOrigins.push(process.env.ALLOWED_ORIGIN);
+}
+
 const io = new Server(server, {
   cors: {
-    origin: [
-      'http://localhost:5173',
-      'http://192.168.1.51:5173',
-      /^http:\/\/192\.168\.\d+\.\d+:5173$/, // Allow any 192.168.x.x:5173
-      /^http:\/\/10\.\d+\.\d+\.\d+:5173$/,  // Allow any 10.x.x.x:5173
-      /^http:\/\/172\.(1[6-9]|2[0-9]|3[0-1])\.\d+\.\d+:5173$/ // Allow any 172.16-31.x.x:5173
-    ],
+    origin: corsOrigins,
     methods: ['GET', 'POST'],
     credentials: true
   }
@@ -37,13 +45,7 @@ app.use(helmet({
 }));
 
 app.use(cors({
-  origin: [
-    'http://localhost:5173',
-    'http://192.168.1.51:5173',
-    /^http:\/\/192\.168\.\d+\.\d+:5173$/, // Allow any 192.168.x.x:5173
-    /^http:\/\/10\.\d+\.\d+\.\d+:5173$/,  // Allow any 10.x.x.x:5173
-    /^http:\/\/172\.(1[6-9]|2[0-9]|3[0-1])\.\d+\.\d+:5173$/ // Allow any 172.16-31.x.x:5173
-  ],
+  origin: corsOrigins,
   credentials: true
 }));
 
