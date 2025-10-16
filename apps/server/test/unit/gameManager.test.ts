@@ -241,13 +241,36 @@ describe('GameManager', () => {
       if (charlie) gameManager.acknowledgeRoleInfo(gameId, charlie.playerId);
       
       const game = gameManager.getGame(gameId);
-      expect(game?.currentPlayerIndex).toBe(0);
+      // Starting player is now randomized, so we can't assume it's 0
+      const startingPlayerIndex = game?.currentPlayerIndex || 0;
+      expect(startingPlayerIndex).toBeGreaterThanOrEqual(0);
+      expect(startingPlayerIndex).toBeLessThan(game?.players.length || 1);
       
-      if (alice) gameManager.nextTurn(gameId, alice.playerId);
-      expect(game?.currentPlayerIndex).toBe(1);
+      // Find which player is starting and advance through all players
+      let currentIndex = startingPlayerIndex;
+      const playerOrder: number[] = [];
       
-      if (bob) gameManager.nextTurn(gameId, bob.playerId);
-      expect(game?.currentPlayerIndex).toBe(2);
+      // Record the order of players for this round
+      const playerCount = game?.players.length || 0;
+      for (let i = 0; i < playerCount; i++) {
+        playerOrder.push(currentIndex);
+        currentIndex = (currentIndex + 1) % playerCount;
+      }
+      
+      // Advance through all players in the expected order
+      for (let i = 0; i < playerOrder.length; i++) {
+        const playerIndex = playerOrder[i];
+        const player = game?.players[playerIndex];
+        if (player) {
+          gameManager.nextTurn(gameId, player.id);
+          
+          // Check the next player index (except for the last player)
+          if (i < playerOrder.length - 1) {
+            const nextExpectedIndex = playerOrder[i + 1];
+            expect(game?.currentPlayerIndex).toBe(nextExpectedIndex);
+          }
+        }
+      }
       
       // After all players have asked questions, should transition to accusing mode
       if (charlie) gameManager.nextTurn(gameId, charlie.playerId);
@@ -290,20 +313,26 @@ describe('GameManager', () => {
       if (charlie) gameManager.acknowledgeRoleInfo(gameId, charlie.playerId);
       
       const game = gameManager.getGame(gameId);
-      expect(game?.currentPlayerIndex).toBe(0); // Alice's turn
+      const startingPlayerIndex = game?.currentPlayerIndex || 0;
+      expect(startingPlayerIndex).toBeGreaterThanOrEqual(0);
+      expect(startingPlayerIndex).toBeLessThan(game?.players.length || 1);
       
-      // Bob tries to advance the turn when it's Alice's turn
-      if (bob) {
-        const result = gameManager.nextTurn(gameId, bob.playerId);
+      const startingPlayer = game?.players[startingPlayerIndex];
+      const nextPlayerIndex = (startingPlayerIndex + 1) % (game?.players.length || 1);
+      const nextPlayer = game?.players[nextPlayerIndex];
+      
+      // Wrong player tries to advance the turn
+      if (nextPlayer && startingPlayer) {
+        const result = gameManager.nextTurn(gameId, nextPlayer.id);
         expect(result).toBe(false);
-        expect(game?.currentPlayerIndex).toBe(0); // Still Alice's turn
+        expect(game?.currentPlayerIndex).toBe(startingPlayerIndex); // Still the starting player's turn
       }
       
-      // Alice can advance her own turn
-      if (alice) {
-        const result = gameManager.nextTurn(gameId, alice.playerId);
+      // Starting player can advance their own turn
+      if (startingPlayer) {
+        const result = gameManager.nextTurn(gameId, startingPlayer.id);
         expect(result).toBe(true);
-        expect(game?.currentPlayerIndex).toBe(1); // Now Bob's turn
+        expect(game?.currentPlayerIndex).toBe(nextPlayerIndex); // Now next player's turn
       }
     });
 
@@ -321,18 +350,23 @@ describe('GameManager', () => {
       if (charlie) gameManager.acknowledgeRoleInfo(gameId, charlie.playerId);
       
       const game = gameManager.getGame(gameId);
-      expect(game?.currentPlayerIndex).toBe(0); // Alice's turn
+      const startingPlayerIndex = game?.currentPlayerIndex || 0;
+      expect(startingPlayerIndex).toBeGreaterThanOrEqual(0);
+      expect(startingPlayerIndex).toBeLessThan(game?.players.length || 1);
       
-      // Alice advances her turn
-      if (alice) {
-        const firstResult = gameManager.nextTurn(gameId, alice.playerId);
+      const startingPlayer = game?.players[startingPlayerIndex];
+      const nextPlayerIndex = (startingPlayerIndex + 1) % (game?.players.length || 1);
+      
+      // Starting player advances their turn
+      if (startingPlayer) {
+        const firstResult = gameManager.nextTurn(gameId, startingPlayer.id);
         expect(firstResult).toBe(true);
-        expect(game?.currentPlayerIndex).toBe(1); // Now Bob's turn
+        expect(game?.currentPlayerIndex).toBe(nextPlayerIndex); // Now next player's turn
         
-        // Alice tries to advance again immediately (simulating double-click)
-        const secondResult = gameManager.nextTurn(gameId, alice.playerId);
+        // Starting player tries to advance again immediately (simulating double-click)
+        const secondResult = gameManager.nextTurn(gameId, startingPlayer.id);
         expect(secondResult).toBe(false);
-        expect(game?.currentPlayerIndex).toBe(1); // Still Bob's turn, no skip
+        expect(game?.currentPlayerIndex).toBe(nextPlayerIndex); // Still next player's turn, no skip
       }
     });
 
@@ -348,12 +382,14 @@ describe('GameManager', () => {
       if (bob) gameManager.acknowledgeRoleInfo(gameId, bob.playerId);
       
       const game = gameManager.getGame(gameId);
-      expect(game?.currentPlayerIndex).toBe(0); // Alice's turn
+      const startingPlayerIndex = game?.currentPlayerIndex || 0;
+      expect(startingPlayerIndex).toBeGreaterThanOrEqual(0);
+      expect(startingPlayerIndex).toBeLessThan(game?.players.length || 1);
       
       // Try to advance with invalid player id
       const result = gameManager.nextTurn(gameId, 'invalid-player-id');
       expect(result).toBe(false);
-      expect(game?.currentPlayerIndex).toBe(0); // Still Alice's turn
+      expect(game?.currentPlayerIndex).toBe(startingPlayerIndex); // Still starting player's turn
     });
   });
 
@@ -374,9 +410,14 @@ describe('GameManager', () => {
       const game = gameManager.getGame(gameId);
       
       // Advance through all turns to reach accusing mode
-      if (alice) gameManager.nextTurn(gameId, alice.playerId);
-      if (bob) gameManager.nextTurn(gameId, bob.playerId);
-      if (charlie) gameManager.nextTurn(gameId, charlie.playerId);
+      let currentIndex = game?.currentPlayerIndex || 0;
+      for (let i = 0; i < (game?.players.length || 0); i++) {
+        const currentPlayer = game?.players[currentIndex];
+        if (currentPlayer) {
+          gameManager.nextTurn(gameId, currentPlayer.id);
+        }
+        currentIndex = (currentIndex + 1) % (game?.players.length || 1);
+      }
       
       expect(game?.status).toBe('accusing');
       
@@ -406,9 +447,7 @@ describe('GameManager', () => {
       const game = gameManager.getGame(gameId);
       
       // Advance through all turns to reach accusing mode
-      if (alice) gameManager.nextTurn(gameId, alice.playerId);
-      if (bob) gameManager.nextTurn(gameId, bob.playerId);
-      if (charlie) gameManager.nextTurn(gameId, charlie.playerId);
+      game?.players.forEach(player => gameManager.nextTurn(gameId, player.id));
       
       expect(game?.status).toBe('accusing');
       
@@ -443,9 +482,7 @@ describe('GameManager', () => {
       const game = gameManager.getGame(gameId);
       
       // Advance through all turns to reach accusing mode
-      if (alice) gameManager.nextTurn(gameId, alice.playerId);
-      if (bob) gameManager.nextTurn(gameId, bob.playerId);
-      if (charlie) gameManager.nextTurn(gameId, charlie.playerId);
+      game?.players.forEach(player => gameManager.nextTurn(gameId, player.id));
       
       expect(game?.status).toBe('accusing');
       
@@ -543,16 +580,27 @@ describe('GameManager', () => {
           
           // Advance turns - note that after all players have asked questions, 
           // the game transitions to 'accusing' mode, so we can only go through one full round
-          for (let i = 0; i < playerCount - 1; i++) {
-            const game = gameManager.getGame(gameId);
-            expect(game?.currentPlayerIndex).toBe(i);
-            gameManager.nextTurn(gameId, playerIds[i]);
+          const game = gameManager.getGame(gameId);
+          let currentIndex = game?.currentPlayerIndex || 0;
+          
+          // Advance through all players in the expected order
+          for (let i = 0; i < playerCount; i++) {
+            const currentGame = gameManager.getGame(gameId);
+            expect(currentGame?.currentPlayerIndex).toBe(currentIndex);
+            
+            // Find the player at the current index
+            const currentPlayer = currentGame?.players[currentIndex];
+            if (currentPlayer) {
+              gameManager.nextTurn(gameId, currentPlayer.id);
+            }
+            
+            // Move to next player index
+            currentIndex = (currentIndex + 1) % playerCount;
           }
           
-          // After last player's turn, game should transition to accusing mode
-          const game = gameManager.getGame(gameId);
-          gameManager.nextTurn(gameId, playerIds[playerCount - 1]);
-          expect(game?.status).toBe('accusing');
+          // After all players have asked questions, game should transition to accusing mode
+          const finalGame = gameManager.getGame(gameId);
+          expect(finalGame?.status).toBe('accusing');
         }
       ));
     });
@@ -575,7 +623,12 @@ describe('GameManager', () => {
       const game = gameManager.getGame(gameId)!;
       
       // Complete question round
-      game.players.forEach(player => gameManager.nextTurn(gameId, player.id));
+      let currentIndex = game.currentPlayerIndex;
+      for (let i = 0; i < game.players.length; i++) {
+        const currentPlayer = game.players[currentIndex];
+        gameManager.nextTurn(gameId, currentPlayer.id);
+        currentIndex = (currentIndex + 1) % game.players.length;
+      }
       
       const spy = game.players.find(p => p.role === 'spy')!;
       const civilians = game.players.filter(p => p.role === 'civilian');
@@ -635,7 +688,12 @@ describe('GameManager', () => {
       const game = gameManager.getGame(gameId)!;
       
       // Complete question round
-      game.players.forEach(player => gameManager.nextTurn(gameId, player.id));
+      let currentIndex = game.currentPlayerIndex;
+      for (let i = 0; i < game.players.length; i++) {
+        const currentPlayer = game.players[currentIndex];
+        gameManager.nextTurn(gameId, currentPlayer.id);
+        currentIndex = (currentIndex + 1) % game.players.length;
+      }
       
       const spy = game.players.find(p => p.role === 'spy')!;
       const civilians = game.players.filter(p => p.role === 'civilian');
@@ -677,7 +735,12 @@ describe('GameManager', () => {
       const game = gameManager.getGame(gameId)!;
       
       // Complete question round
-      game.players.forEach(player => gameManager.nextTurn(gameId, player.id));
+      let currentIndex = game.currentPlayerIndex;
+      for (let i = 0; i < game.players.length; i++) {
+        const currentPlayer = game.players[currentIndex];
+        gameManager.nextTurn(gameId, currentPlayer.id);
+        currentIndex = (currentIndex + 1) % game.players.length;
+      }
       
       const spy = game.players.find(p => p.role === 'spy')!;
       const civilians = game.players.filter(p => p.role === 'civilian');
@@ -729,7 +792,12 @@ describe('GameManager', () => {
       const game = gameManager.getGame(gameId)!;
       
       // Complete question round
-      game.players.forEach(player => gameManager.nextTurn(gameId, player.id));
+      let currentIndex = game.currentPlayerIndex;
+      for (let i = 0; i < game.players.length; i++) {
+        const currentPlayer = game.players[currentIndex];
+        gameManager.nextTurn(gameId, currentPlayer.id);
+        currentIndex = (currentIndex + 1) % game.players.length;
+      }
       
       const spy = game.players.find(p => p.role === 'spy')!;
       const civilians = game.players.filter(p => p.role === 'civilian');
@@ -770,7 +838,12 @@ describe('GameManager', () => {
       const game = gameManager.getGame(gameId)!;
       
       // Complete question round
-      game.players.forEach(player => gameManager.nextTurn(gameId, player.id));
+      let currentIndex = game.currentPlayerIndex;
+      for (let i = 0; i < game.players.length; i++) {
+        const currentPlayer = game.players[currentIndex];
+        gameManager.nextTurn(gameId, currentPlayer.id);
+        currentIndex = (currentIndex + 1) % game.players.length;
+      }
       
       const spy = game.players.find(p => p.role === 'spy')!;
       const civilians = game.players.filter(p => p.role === 'civilian');
@@ -813,7 +886,12 @@ describe('GameManager', () => {
       const game = gameManager.getGame(gameId)!;
       
       // Complete question round
-      game.players.forEach(player => gameManager.nextTurn(gameId, player.id));
+      let currentIndex = game.currentPlayerIndex;
+      for (let i = 0; i < game.players.length; i++) {
+        const currentPlayer = game.players[currentIndex];
+        gameManager.nextTurn(gameId, currentPlayer.id);
+        currentIndex = (currentIndex + 1) % game.players.length;
+      }
       
       const spy = game.players.find(p => p.role === 'spy')!;
       const civilians = game.players.filter(p => p.role === 'civilian');
@@ -836,6 +914,240 @@ describe('GameManager', () => {
       // Both civilians get points
       expect(updatedGame.players.find(p => p.id === civilians[0].id)!.score).toBe(1);
       expect(updatedGame.players.find(p => p.id === civilians[1].id)!.score).toBe(1);
+    });
+  });
+
+  describe('Player Order Randomization', () => {
+    it('should randomize starting player for the first round', () => {
+      const startingPlayerIndices: number[] = [];
+      
+      // Run multiple games to test first round randomization
+      for (let gameNum = 0; gameNum < 20; gameNum++) {
+        const gameId = gameManager.createGame();
+        const alice = gameManager.addPlayer(gameId, 'Alice');
+        const bob = gameManager.addPlayer(gameId, 'Bob');
+        const charlie = gameManager.addPlayer(gameId, 'Charlie');
+        
+        gameManager.startRound(gameId);
+        
+        // Acknowledge all players to transition to playing
+        if (alice) gameManager.acknowledgeRoleInfo(gameId, alice.playerId);
+        if (bob) gameManager.acknowledgeRoleInfo(gameId, bob.playerId);
+        if (charlie) gameManager.acknowledgeRoleInfo(gameId, charlie.playerId);
+        
+        const game = gameManager.getGame(gameId)!;
+        startingPlayerIndices.push(game.currentPlayerIndex);
+      }
+      
+      // Check that we got variation in starting player indices for first rounds
+      // With 3 players, we should see at least 2 different starting indices over 20 games
+      const uniqueStartingIndices = new Set(startingPlayerIndices);
+      expect(uniqueStartingIndices.size).toBeGreaterThan(1);
+      
+      // All indices should be valid (0, 1, or 2)
+      startingPlayerIndices.forEach(index => {
+        expect(index).toBeGreaterThanOrEqual(0);
+        expect(index).toBeLessThan(3);
+      });
+    });
+    it('should randomize player order when continuing to next question round after nobody wins', () => {
+      const gameId = gameManager.createGame();
+      const alice = gameManager.addPlayer(gameId, 'Alice', true);
+      const bob = gameManager.addPlayer(gameId, 'Bob');
+      const charlie = gameManager.addPlayer(gameId, 'Charlie');
+      const dave = gameManager.addPlayer(gameId, 'Dave');
+      
+      gameManager.startRound(gameId);
+      
+      // Acknowledge all players to transition to playing
+      if (alice) gameManager.acknowledgeRoleInfo(gameId, alice.playerId);
+      if (bob) gameManager.acknowledgeRoleInfo(gameId, bob.playerId);
+      if (charlie) gameManager.acknowledgeRoleInfo(gameId, charlie.playerId);
+      if (dave) gameManager.acknowledgeRoleInfo(gameId, dave.playerId);
+      
+      const game = gameManager.getGame(gameId)!;
+      
+      // Complete question round - advance through players in the correct order
+      let currentIndex = game.currentPlayerIndex;
+      for (let i = 0; i < game.players.length; i++) {
+        const currentPlayer = game.players[currentIndex];
+        gameManager.nextTurn(gameId, currentPlayer.id);
+        currentIndex = (currentIndex + 1) % game.players.length;
+      }
+      
+      const spy = game.players.find(p => p.role === 'spy')!;
+      const civilians = game.players.filter(p => p.role === 'civilian');
+      
+      // Spy guesses wrong location
+      gameManager.submitSpyGuess(gameId, spy.id, 'Wrong Location');
+      
+      // All civilians vote for different players (nobody wins)
+      gameManager.submitPlayerVote(gameId, civilians[0].id, civilians[1].id);
+      gameManager.submitPlayerVote(gameId, civilians[1].id, civilians[2].id);
+      if (civilians[2]) {
+        gameManager.submitPlayerVote(gameId, civilians[2].id, civilians[0].id);
+      }
+      
+      const updatedGame = gameManager.getGame(gameId)!;
+      
+      // Game should continue with new question round
+      expect(updatedGame.status).toBe('playing');
+      expect(updatedGame.currentPlayerIndex).toBeGreaterThanOrEqual(0);
+      expect(updatedGame.currentPlayerIndex).toBeLessThan(updatedGame.players.length);
+      
+      // Reset all players' hasAskedQuestion flag
+      updatedGame.players.forEach(p => {
+        expect(p.hasAskedQuestion).toBe(false);
+      });
+    });
+
+    it('should randomize player order multiple times across multiple rounds', () => {
+      const gameId = gameManager.createGame();
+      const alice = gameManager.addPlayer(gameId, 'Alice', true);
+      const bob = gameManager.addPlayer(gameId, 'Bob');
+      const charlie = gameManager.addPlayer(gameId, 'Charlie');
+      
+      gameManager.startRound(gameId);
+      
+      // Acknowledge all players to transition to playing
+      if (alice) gameManager.acknowledgeRoleInfo(gameId, alice.playerId);
+      if (bob) gameManager.acknowledgeRoleInfo(gameId, bob.playerId);
+      if (charlie) gameManager.acknowledgeRoleInfo(gameId, charlie.playerId);
+      
+      const startingPlayerIndices: number[] = [];
+      
+      // Run multiple rounds to test randomization
+      for (let round = 0; round < 10; round++) {
+        const game = gameManager.getGame(gameId)!;
+        
+        // Record the starting player index for this round
+        startingPlayerIndices.push(game.currentPlayerIndex);
+        
+        // Complete question round
+        game.players.forEach(player => gameManager.nextTurn(gameId, player.id));
+        
+        const spy = game.players.find(p => p.role === 'spy')!;
+        const civilians = game.players.filter(p => p.role === 'civilian');
+        
+        // Spy guesses wrong location
+        gameManager.submitSpyGuess(gameId, spy.id, 'Wrong Location');
+        
+        // All civilians vote for different players (nobody wins)
+        gameManager.submitPlayerVote(gameId, civilians[0].id, civilians[1].id);
+        gameManager.submitPlayerVote(gameId, civilians[1].id, civilians[0].id);
+        
+        // Verify game continues to next round
+        const updatedGame = gameManager.getGame(gameId)!;
+        expect(updatedGame.status).toBe('playing');
+      }
+      
+      // Check that we got some variation in starting player indices
+      // With 3 players, we should see at least 2 different starting indices over 10 rounds
+      const uniqueStartingIndices = new Set(startingPlayerIndices);
+      expect(uniqueStartingIndices.size).toBeGreaterThan(1);
+      
+      // All indices should be valid (0, 1, or 2)
+      startingPlayerIndices.forEach(index => {
+        expect(index).toBeGreaterThanOrEqual(0);
+        expect(index).toBeLessThan(3);
+      });
+    });
+
+    it('should maintain consistent player order within a single question round', () => {
+      const gameId = gameManager.createGame();
+      const alice = gameManager.addPlayer(gameId, 'Alice', true);
+      const bob = gameManager.addPlayer(gameId, 'Bob');
+      const charlie = gameManager.addPlayer(gameId, 'Charlie');
+      
+      gameManager.startRound(gameId);
+      
+      // Acknowledge all players to transition to playing
+      if (alice) gameManager.acknowledgeRoleInfo(gameId, alice.playerId);
+      if (bob) gameManager.acknowledgeRoleInfo(gameId, bob.playerId);
+      if (charlie) gameManager.acknowledgeRoleInfo(gameId, charlie.playerId);
+      
+      const game = gameManager.getGame(gameId)!;
+      const initialStartingPlayerIndex = game.currentPlayerIndex;
+      
+      // Within a single round, player order should be consistent (sequential advancement)
+      let currentIndex = initialStartingPlayerIndex;
+      
+      // Advance through all players
+      for (let i = 0; i < game.players.length; i++) {
+        const currentPlayer = game.players[currentIndex];
+        gameManager.nextTurn(gameId, currentPlayer.id);
+        
+        // For the last player, game transitions to accusing mode
+        if (i === game.players.length - 1) {
+          break;
+        }
+        
+        // Verify next player index follows sequential order
+        const updatedGame = gameManager.getGame(gameId)!;
+        const expectedNextIndex = (currentIndex + 1) % game.players.length;
+        
+        // Skip disconnected players in the calculation
+        let actualNextIndex = expectedNextIndex;
+        while (!updatedGame.players[actualNextIndex].isConnected && actualNextIndex !== currentIndex) {
+          actualNextIndex = (actualNextIndex + 1) % game.players.length;
+        }
+        
+        expect(updatedGame.currentPlayerIndex).toBe(actualNextIndex);
+        currentIndex = actualNextIndex;
+      }
+      
+      // After all players have asked questions, should transition to accusing mode
+      const finalGame = gameManager.getGame(gameId)!;
+      expect(finalGame.status).toBe('accusing');
+    });
+
+    it('should randomize starting player but maintain sequential order within round', () => {
+      const gameId = gameManager.createGame();
+      const alice = gameManager.addPlayer(gameId, 'Alice', true);
+      const bob = gameManager.addPlayer(gameId, 'Bob');
+      const charlie = gameManager.addPlayer(gameId, 'Charlie');
+      const dave = gameManager.addPlayer(gameId, 'Dave');
+      
+      gameManager.startRound(gameId);
+      
+      // Acknowledge all players to transition to playing
+      if (alice) gameManager.acknowledgeRoleInfo(gameId, alice.playerId);
+      if (bob) gameManager.acknowledgeRoleInfo(gameId, bob.playerId);
+      if (charlie) gameManager.acknowledgeRoleInfo(gameId, charlie.playerId);
+      if (dave) gameManager.acknowledgeRoleInfo(gameId, dave.playerId);
+      
+      // Complete first round
+      let game = gameManager.getGame(gameId)!;
+      game.players.forEach(player => gameManager.nextTurn(gameId, player.id));
+      
+      const spy = game.players.find(p => p.role === 'spy')!;
+      const civilians = game.players.filter(p => p.role === 'civilian');
+      
+      // Spy guesses wrong location
+      gameManager.submitSpyGuess(gameId, spy.id, 'Wrong Location');
+      
+      // All civilians vote for different players (nobody wins)
+      gameManager.submitPlayerVote(gameId, civilians[0].id, civilians[1].id);
+      gameManager.submitPlayerVote(gameId, civilians[1].id, civilians[2].id);
+      if (civilians[2]) {
+        gameManager.submitPlayerVote(gameId, civilians[2].id, civilians[0].id);
+      }
+      
+      // Get the randomized starting player for the new round
+      game = gameManager.getGame(gameId)!;
+      const randomizedStartingIndex = game.currentPlayerIndex;
+      
+      // Verify the starting player is randomized (not necessarily 0)
+      expect(randomizedStartingIndex).toBeGreaterThanOrEqual(0);
+      expect(randomizedStartingIndex).toBeLessThan(game.players.length);
+      
+      // Within this new round, verify sequential order is maintained
+      const startingPlayer = game.players[randomizedStartingIndex];
+      gameManager.nextTurn(gameId, startingPlayer.id);
+      
+      const nextGame = gameManager.getGame(gameId)!;
+      const expectedNextIndex = (randomizedStartingIndex + 1) % nextGame.players.length;
+      expect(nextGame.currentPlayerIndex).toBe(expectedNextIndex);
     });
   });
 });

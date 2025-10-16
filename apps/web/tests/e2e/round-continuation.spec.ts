@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { PlayerBuilder, HostBuilder, TestSetup } from './helpers/TestBuilders';
+import { TestPlayer } from './helpers/TestPlayer';
 
 test.describe('Spyfall Round Continuation', () => {
   test('continues to next question round when nobody wins', async ({ browser }) => {
@@ -68,10 +69,7 @@ test.describe('Spyfall Round Continuation', () => {
       console.log(`🗺️  Location is: ${originalLocation}`);
 
       // Given: Each player asks their question
-      console.log('❓ Each player asking their question...');
-      await players[0].player.clickNext();
-      await players[1].player.clickNext();
-      await players[2].player.clickNext();
+      await TestPlayer.advanceAllPlayersInTurnOrder(players.map(p => p.player));
 
       // Wait for accuse mode to start
       console.log('⏳ Waiting for accusation phase...');

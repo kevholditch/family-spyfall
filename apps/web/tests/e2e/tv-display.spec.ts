@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { PlayerBuilder, HostBuilder, TestSetup } from './helpers/TestBuilders';
+import { TestPlayer } from './helpers/TestPlayer';
 
 test.describe('HomePage TV Display', () => {
   test('shows game in progress with scoreboard when game starts', async ({ browser }) => {
@@ -116,9 +117,7 @@ test.describe('HomePage TV Display', () => {
       await playerC.acknowledgeRole();
 
       // Progress through the round
-      await playerA.clickNext();
-      await playerB.clickNext();
-      await playerC.clickNext();
+      await TestPlayer.advanceAllPlayersInTurnOrder([playerA, playerB, playerC]);
 
       // Find the spy and have them make a wrong guess
       let spy = playerA;
@@ -235,9 +234,7 @@ test.describe('HomePage TV Display', () => {
       await playerC.acknowledgeRole();
 
       // Progress through the round
-      await playerA.clickNext();
-      await playerB.clickNext();
-      await playerC.clickNext();
+      await TestPlayer.advanceAllPlayersInTurnOrder([playerA, playerB, playerC]);
 
       // Find the spy
       let spy = playerA;
@@ -336,9 +333,7 @@ test.describe('HomePage TV Display', () => {
       await playerC.acknowledgeRole();
 
       // Progress through the round
-      await playerA.clickNext();
-      await playerB.clickNext();
-      await playerC.clickNext();
+      await TestPlayer.advanceAllPlayersInTurnOrder([playerA, playerB, playerC]);
 
       // Find the spy and get the location
       let spy = playerA;

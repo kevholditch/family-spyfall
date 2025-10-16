@@ -91,7 +91,8 @@ export class GameManager {
     if (!game || game.players.length < 1) return false;
 
     // Reset game state
-    game.currentPlayerIndex = 0;
+    // Randomize the starting player for the first round
+    game.currentPlayerIndex = Math.floor(Math.random() * game.players.length);
     game.roundNumber++;
     game.status = 'informing_players';
     game.currentLocation = undefined;
@@ -286,7 +287,8 @@ export class GameManager {
     if (!spyWon && !civiliansWon) {
       // Reset for new question round - don't show roles again, just continue
       game.status = 'playing';
-      game.currentPlayerIndex = 0;
+      // Randomize the starting player for the new question round
+      game.currentPlayerIndex = Math.floor(Math.random() * game.players.length);
       game.accuseMode = undefined;
       game.roundResult = undefined;
       game.players.forEach(p => {

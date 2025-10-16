@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { PlayerBuilder, HostBuilder, TestSetup } from './helpers/TestBuilders';
+import { TestPlayer } from './helpers/TestPlayer';
 
 test.describe('Spyfall Winning Scenarios', () => {
   test('civilians win when majority correctly identify spy and spy guesses wrong', async ({ browser }) => {
@@ -56,9 +57,7 @@ test.describe('Spyfall Winning Scenarios', () => {
       await playerC.acknowledgeRole();
 
       // All players ask questions
-      await players[0].player.clickNext();
-      await players[1].player.clickNext();
-      await players[2].player.clickNext();
+      await TestPlayer.advanceAllPlayersInTurnOrder(players.map(p => p.player));
 
       await playerA.waitForAccusationPhase();
 
@@ -155,9 +154,7 @@ test.describe('Spyfall Winning Scenarios', () => {
       await playerC.acknowledgeRole();
 
       // All players ask questions
-      await players[0].player.clickNext();
-      await players[1].player.clickNext();
-      await players[2].player.clickNext();
+      await TestPlayer.advanceAllPlayersInTurnOrder(players.map(p => p.player));
 
       await playerA.waitForAccusationPhase();
 
@@ -250,9 +247,7 @@ test.describe('Spyfall Winning Scenarios', () => {
       await playerC.acknowledgeRole();
 
       // All players ask questions
-      await players[0].player.clickNext();
-      await players[1].player.clickNext();
-      await players[2].player.clickNext();
+      await TestPlayer.advanceAllPlayersInTurnOrder(players.map(p => p.player));
 
       await playerA.waitForAccusationPhase();
 

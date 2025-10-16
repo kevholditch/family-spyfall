@@ -75,9 +75,27 @@ export class TestPlayer {
   }
 
   async clickNext(): Promise<void> {
-    await this.page.waitForSelector('button:has-text("Done")', { timeout: 5000 });
+    // Wait for the "Done" button to be visible (indicating it's this player's turn)
+    await this.page.waitForSelector('button:has-text("Done")', { timeout: 10000 });
     await this.page.click('button:has-text("Done")');
     console.log(`✅ [${this.name}] asked their question`);
+  }
+
+  async clickNextIfMyTurn(): Promise<boolean> {
+    try {
+      // Check if it's this player's turn by looking for the "Done" button
+      const doneButton = this.page.locator('button:has-text("Done")');
+      const isVisible = await doneButton.isVisible();
+      
+      if (isVisible) {
+        await doneButton.click();
+        console.log(`✅ [${this.name}] asked their question`);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      return false;
+    }
   }
 
   async guessLocation(location: string): Promise<void> {
@@ -174,6 +192,33 @@ export class TestPlayer {
   async close(): Promise<void> {
     await this.page.close();
     await this.context.close();
+  }
+
+  // Static helper method to advance through all players in turn order
+  static async advanceAllPlayersInTurnOrder(players: TestPlayer[]): Promise<void> {
+    console.log('❓ Each player asking their question...');
+    
+    // Keep trying until all players have had their turn
+    let playersCompleted = 0;
+    const totalPlayers = players.length;
+    
+    while (playersCompleted < totalPlayers) {
+      let anyPlayerAdvanced = false;
+      
+      for (const player of players) {
+        const didAdvance = await player.clickNextIfMyTurn();
+        if (didAdvance) {
+          playersCompleted++;
+          anyPlayerAdvanced = true;
+          break; // Move to next iteration to let the next player's turn start
+        }
+      }
+      
+      // If no player could advance, wait a bit and try again
+      if (!anyPlayerAdvanced) {
+        await players[0].page.waitForTimeout(100);
+      }
+    }
   }
 }
 
