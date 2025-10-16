@@ -25,10 +25,10 @@ test: test-server test-web
 	@echo "All tests completed!"
 
 # Local deployment - sets up Nginx Proxy Manager and starts services
-# Usage: make local-deploy DOMAIN=family-spyfall.xyz
+# Usage: make local-deploy DOMAIN=your-domain.com
 local-deploy:
 	@if [ -z "$(DOMAIN)" ]; then \
-		echo "Error: DOMAIN is required. Usage: make local-deploy DOMAIN=family-spyfall.xyz"; \
+		echo "Error: DOMAIN is required. Usage: make local-deploy DOMAIN=your-domain.com"; \
 		exit 1; \
 	fi
 	@echo "🏠 Setting up local deployment for domain: $(DOMAIN)"

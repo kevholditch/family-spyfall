@@ -3,6 +3,7 @@ import { useSocket } from '../hooks/useSocket';
 import { useGameState } from '../hooks/useGameState';
 import { QRCodeDisplay } from '../components/QRCodeDisplay';
 import { debugLog, errorLog } from '../utils/debug';
+import { getApiUrl } from '../utils/api';
 
 // Countdown hook for round summary
 function useRoundCountdown(isRoundSummary: boolean) {
@@ -22,8 +23,8 @@ function useRoundCountdown(isRoundSummary: boolean) {
 }
 
 export function HomePage() {
-  // Use the same host as the web app but port 4000 for the server
-  const serverUrl = `${window.location.protocol}//${window.location.hostname}:4000`;
+  // Get API URL based on current hostname
+  const serverUrl = getApiUrl();
   const { emit, gameUpdate, error, isConnected } = useSocket(serverUrl);
   const { gameState, setGame, updateGameState } = useGameState();
   const [isCreatingGame, setIsCreatingGame] = useState(false);

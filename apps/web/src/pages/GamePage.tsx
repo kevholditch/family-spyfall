@@ -5,10 +5,12 @@ import { useGameState } from '../hooks/useGameState';
 import { ArrowLeft } from 'lucide-react';
 import { debugLog, debugError } from '../utils/debug';
 import { SPYFALL_LOCATIONS } from '../types';
+import { getApiUrl } from '../utils/api';
 
 export function GamePage() {
   const { gameId } = useParams<{ gameId: string }>();
-  const serverUrl = `${window.location.protocol}//${window.location.hostname}:4000`;
+  // Get API URL based on current hostname
+  const serverUrl = getApiUrl();
   const { emit, gameUpdate, error, isConnected, roleAssignment } = useSocket(serverUrl);
   const { gameState, currentPlayer, setGame, updateGameState } = useGameState();
   const [hasRejoined, setHasRejoined] = useState(false);

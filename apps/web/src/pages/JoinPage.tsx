@@ -4,11 +4,12 @@ import { useSocket } from '../hooks/useSocket';
 import { useGameState } from '../hooks/useGameState';
 import { ArrowLeft, Users } from 'lucide-react';
 import { debugLog } from '../utils/debug';
+import { getApiUrl } from '../utils/api';
 
 export function JoinPage() {
   const { gameId } = useParams<{ gameId: string }>();
-  // Use the same host as the web app but port 4000 for the server
-  const serverUrl = `${window.location.protocol}//${window.location.hostname}:4000`;
+  // Get API URL based on current hostname
+  const serverUrl = getApiUrl();
   const { emit, gameUpdate, error, isConnected } = useSocket(serverUrl);
   const { gameState, setGame, updateGameState } = useGameState();
   const [playerName, setPlayerName] = useState('');
