@@ -30,6 +30,8 @@ export function HomePage() {
   const [isCreatingGame, setIsCreatingGame] = useState(false);
   const [createdGameId, setCreatedGameId] = useState<string | null>(null);
   const [hasReconnected, setHasReconnected] = useState(false);
+  const [joinGameId, setJoinGameId] = useState('');
+  const [showJoinInput, setShowJoinInput] = useState(false);
   
   // Countdown timer for round summary
   const countdown = useRoundCountdown(gameState?.status === 'round_summary');
@@ -173,6 +175,20 @@ export function HomePage() {
     }
   };
 
+  const handleJoinGame = () => {
+    if (joinGameId.trim()) {
+      window.location.href = `/join/${joinGameId.trim()}`;
+    }
+  };
+
+  const handleJoinGameClick = () => {
+    if (showJoinInput) {
+      handleJoinGame();
+    } else {
+      setShowJoinInput(true);
+    }
+  };
+
   // Handle successful join - only for TV Host
   useEffect(() => {
     if (gameUpdate?.type === 'player_joined' && 
@@ -287,42 +303,159 @@ export function HomePage() {
           </div>
         </div>
 
-        {/* Create Game Button - Make it larger too */}
-        <button
-          onClick={handleCreateGame}
-          disabled={isCreatingGame}
-          className="px-16 py-8 text-3xl md:text-4xl font-bold transition-all duration-300 transform hover:scale-105 hover:shadow-2xl disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-none"
-          style={{
-            backgroundColor: '#ff8c42', // Golden orange
-            color: '#f5f5dc', // Cream
-            boxShadow: '0 8px 32px rgba(255, 140, 66, 0.3), 0 4px 16px rgba(0, 0, 0, 0.2)',
-            border: 'none',
-            borderRadius: '12px',
-            padding: '32px 64px',
-            cursor: 'pointer'
-          }}
-          onMouseEnter={(e) => {
-            if (!isCreatingGame) {
-              e.currentTarget.style.backgroundColor = '#ff9f66';
-              e.currentTarget.style.boxShadow = '0 12px 40px rgba(255, 140, 66, 0.4), 0 6px 20px rgba(0, 0, 0, 0.3)';
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (!isCreatingGame) {
-              e.currentTarget.style.backgroundColor = '#ff8c42';
-              e.currentTarget.style.boxShadow = '0 8px 32px rgba(255, 140, 66, 0.3), 0 4px 16px rgba(0, 0, 0, 0.2)';
-            }
-          }}
-        >
-          {isCreatingGame ? (
-            <>
-              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-white mr-4"></div>
-              Creating Game...
-            </>
+        {/* Button Container */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'center', maxWidth: '400px', width: '100%' }}>
+          {/* Create Game Button */}
+          <button
+            onClick={handleCreateGame}
+            disabled={isCreatingGame}
+            style={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '0.75rem 1rem',
+              fontSize: '1.1rem',
+              fontWeight: 'bold',
+              backgroundColor: isCreatingGame ? 'rgba(100, 100, 100, 0.5)' : '#ff8c42',
+              color: '#f5f5dc',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: isCreatingGame ? 'not-allowed' : 'pointer',
+              transition: 'background-color 0.2s',
+              opacity: isCreatingGame ? 0.6 : 1
+            }}
+            onMouseOver={(e) => {
+              if (!isCreatingGame) {
+                e.currentTarget.style.backgroundColor = '#ff9f66';
+              }
+            }}
+            onMouseOut={(e) => {
+              if (!isCreatingGame) {
+                e.currentTarget.style.backgroundColor = '#ff8c42';
+              }
+            }}
+          >
+            {isCreatingGame ? 'Creating Game...' : 'Create Game'}
+          </button>
+
+          {/* Join Game Section */}
+          {!showJoinInput ? (
+            <button
+              onClick={handleJoinGameClick}
+              style={{
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '0.75rem 1rem',
+                fontSize: '1.1rem',
+                fontWeight: 'bold',
+                backgroundColor: '#ff8c42',
+                color: '#f5f5dc',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                transition: 'background-color 0.2s'
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.backgroundColor = '#ff9f66';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.backgroundColor = '#ff8c42';
+              }}
+            >
+              Join Game
+            </button>
           ) : (
-            'Create New Game'
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: '100%' }}>
+              <input
+                type="text"
+                value={joinGameId}
+                onChange={(e) => setJoinGameId(e.target.value)}
+                placeholder="Enter Game ID"
+                style={{
+                  width: '100%',
+                  padding: '0.75rem 1rem',
+                  border: '2px solid rgba(255, 140, 66, 0.3)',
+                  borderRadius: '8px',
+                  fontSize: '1rem',
+                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                  color: '#f5f5dc',
+                  outline: 'none',
+                  transition: 'border-color 0.2s'
+                }}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    handleJoinGame();
+                  }
+                }}
+                onFocus={(e) => e.currentTarget.style.borderColor = '#ff8c42'}
+                onBlur={(e) => e.currentTarget.style.borderColor = 'rgba(255, 140, 66, 0.3)'}
+                autoFocus
+              />
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button
+                  onClick={handleJoinGame}
+                  disabled={!joinGameId.trim()}
+                  style={{
+                    flex: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '0.75rem 1rem',
+                    fontSize: '1.1rem',
+                    fontWeight: 'bold',
+                    backgroundColor: !joinGameId.trim() ? 'rgba(100, 100, 100, 0.5)' : '#ff8c42',
+                    color: '#f5f5dc',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: !joinGameId.trim() ? 'not-allowed' : 'pointer',
+                    transition: 'background-color 0.2s',
+                    opacity: !joinGameId.trim() ? 0.6 : 1
+                  }}
+                  onMouseOver={(e) => {
+                    if (joinGameId.trim()) {
+                      e.currentTarget.style.backgroundColor = '#ff9f66';
+                    }
+                  }}
+                  onMouseOut={(e) => {
+                    if (joinGameId.trim()) {
+                      e.currentTarget.style.backgroundColor = '#ff8c42';
+                    }
+                  }}
+                >
+                  Join
+                </button>
+                <button
+                  onClick={() => {
+                    setShowJoinInput(false);
+                    setJoinGameId('');
+                  }}
+                  style={{
+                    padding: '0.75rem 1rem',
+                    fontSize: '1.1rem',
+                    fontWeight: 'bold',
+                    backgroundColor: 'rgba(100, 100, 100, 0.5)',
+                    color: '#f5f5dc',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    transition: 'background-color 0.2s'
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.backgroundColor = 'rgba(100, 100, 100, 0.7)';
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.backgroundColor = 'rgba(100, 100, 100, 0.5)';
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
           )}
-        </button>
+        </div>
       </div>
     );
   }
@@ -865,6 +998,63 @@ export function HomePage() {
         </div>
       </div>
 
+      {/* Start Game Button - Moved below logo for better visibility */}
+      <div className="flex justify-center mb-8" style={{ maxWidth: '400px', width: '100%' }}>
+        <button
+          onClick={() => {
+            console.log('🎮 HomePage - Start Game button clicked');
+            console.log('🎮 HomePage - Game state:', gameState);
+            
+            // Re-authenticate as TV Host before starting round
+            if (gameState?.id) {
+              console.log('🎮 HomePage - Re-authenticating as TV Host for game:', gameState.id);
+              emit('join_game', {
+                gameId: gameState.id,
+                playerName: 'TV Host',
+                isHost: true
+              });
+              
+              // Wait a moment then start the round
+              setTimeout(() => {
+                console.log('🎮 HomePage - Starting round after authentication');
+                emit('start_round');
+              }, 100);
+            } else {
+              console.error('❌ HomePage - No game ID available');
+            }
+          }}
+          disabled={connectedPlayers.length < 1} // Changed from 3 to 1 for testing
+          style={{
+            width: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '0.75rem 1rem',
+            fontSize: '1.1rem',
+            fontWeight: 'bold',
+            backgroundColor: connectedPlayers.length >= 1 ? '#ff8c42' : 'rgba(100, 100, 100, 0.5)',
+            color: '#f5f5dc',
+            border: 'none',
+            borderRadius: '8px',
+            cursor: connectedPlayers.length >= 1 ? 'pointer' : 'not-allowed',
+            transition: 'background-color 0.2s',
+            opacity: connectedPlayers.length >= 1 ? 1 : 0.6
+          }}
+          onMouseOver={(e) => {
+            if (connectedPlayers.length >= 1) {
+              e.currentTarget.style.backgroundColor = '#ff9f66';
+            }
+          }}
+          onMouseOut={(e) => {
+            if (connectedPlayers.length >= 1) {
+              e.currentTarget.style.backgroundColor = '#ff8c42';
+            }
+          }}
+        >
+          {connectedPlayers.length >= 1 ? 'Start Game' : `Need ${1 - connectedPlayers.length} more player(s)`}
+        </button>
+      </div>
+
       {/* Main Content Area */}
       <div 
         style={{
@@ -963,63 +1153,42 @@ export function HomePage() {
           >
             Scan to Join Game
           </h3>
+          
+          {/* Game ID Display */}
+          <div 
+            style={{
+              backgroundColor: 'rgba(30, 58, 95, 0.1)',
+              borderRadius: '8px',
+              padding: '0.75rem 1rem',
+              marginBottom: '1rem',
+              border: '2px solid rgba(30, 58, 95, 0.2)'
+            }}
+          >
+            <div 
+              style={{
+                fontSize: '0.875rem',
+                fontWeight: '500',
+                color: '#1e3a5f',
+                marginBottom: '0.25rem'
+              }}
+            >
+              Game ID
+            </div>
+            <div 
+              style={{
+                fontSize: '1.25rem',
+                fontWeight: 'bold',
+                color: '#1e3a5f',
+                fontFamily: 'monospace',
+                letterSpacing: '0.05em'
+              }}
+            >
+              {gameState.id}
+            </div>
+          </div>
+          
           <QRCodeDisplay gameId={gameState.id} />
         </div>
-      </div>
-
-      {/* Start Game Button */}
-      <div className="flex justify-center mt-8">
-        <button
-          onClick={() => {
-            console.log('🎮 HomePage - Start Game button clicked');
-            console.log('🎮 HomePage - Game state:', gameState);
-            
-            // Re-authenticate as TV Host before starting round
-            if (gameState?.id) {
-              console.log('🎮 HomePage - Re-authenticating as TV Host for game:', gameState.id);
-              emit('join_game', {
-                gameId: gameState.id,
-                playerName: 'TV Host',
-                isHost: true
-              });
-              
-              // Wait a moment then start the round
-              setTimeout(() => {
-                console.log('🎮 HomePage - Starting round after authentication');
-                emit('start_round');
-              }, 100);
-            } else {
-              console.error('❌ HomePage - No game ID available');
-            }
-          }}
-          disabled={connectedPlayers.length < 1} // Changed from 3 to 1 for testing
-          className="px-16 py-8 rounded-xl text-3xl md:text-4xl font-bold transition-all duration-300 transform hover:scale-105 hover:shadow-2xl disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-none"
-          style={{
-            backgroundColor: connectedPlayers.length >= 1 ? '#ff8c42' : '#666666', // Golden orange when enabled, gray when disabled
-            color: '#f5f5dc', // Cream
-            boxShadow: connectedPlayers.length >= 1 
-              ? '0 8px 32px rgba(255, 140, 66, 0.3), 0 4px 16px rgba(0, 0, 0, 0.2)'
-              : '0 4px 16px rgba(0, 0, 0, 0.2)',
-            border: 'none',
-            borderRadius: '12px',
-            padding: '32px 64px',
-            cursor: connectedPlayers.length >= 1 ? 'pointer' : 'not-allowed'
-          }}
-          onMouseEnter={(e) => {
-            if (connectedPlayers.length >= 1) {
-              e.currentTarget.style.backgroundColor = '#ff9f66';
-              e.currentTarget.style.boxShadow = '0 12px 40px rgba(255, 140, 66, 0.4), 0 6px 20px rgba(0, 0, 0, 0.3)';
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (connectedPlayers.length >= 1) {
-              e.currentTarget.style.backgroundColor = '#ff8c42';
-              e.currentTarget.style.boxShadow = '0 8px 32px rgba(255, 140, 66, 0.3), 0 4px 16px rgba(0, 0, 0, 0.2)';
-            }
-          }}
-        >
-          {connectedPlayers.length >= 1 ? 'Start Game' : `Need ${1 - connectedPlayers.length} more player(s)`}
-        </button>
       </div>
     </div>
   );

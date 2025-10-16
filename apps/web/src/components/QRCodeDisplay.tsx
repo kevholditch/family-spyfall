@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { generateQRCode, getJoinUrl } from '../utils/qrCode';
 import { Copy, Check } from 'lucide-react';
 
@@ -104,7 +104,27 @@ export function QRCodeDisplay({ gameId, className = '' }: QRCodeDisplayProps) {
       </p>
       <button
         onClick={handleCopyUrl}
-        className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+        style={{
+          width: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '0.75rem 1rem',
+          fontSize: '1.1rem',
+          fontWeight: 'bold',
+          backgroundColor: '#ff8c42',
+          color: '#f5f5dc',
+          border: 'none',
+          borderRadius: '8px',
+          cursor: 'pointer',
+          transition: 'background-color 0.2s'
+        }}
+        onMouseOver={(e) => {
+          e.currentTarget.style.backgroundColor = '#ff9f66';
+        }}
+        onMouseOut={(e) => {
+          e.currentTarget.style.backgroundColor = '#ff8c42';
+        }}
       >
         {copied ? (
           <>

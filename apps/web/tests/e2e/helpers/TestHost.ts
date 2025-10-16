@@ -14,11 +14,11 @@ export class TestHost {
   }
 
   async createGame(): Promise<string> {
-    console.log('⏳ Waiting for Create New Game button...');
-    await this.page.waitForSelector('button:has-text("Create New Game")');
+    console.log('⏳ Waiting for Create Game button...');
+    await this.page.waitForSelector('button:has-text("Create Game")');
     
-    console.log('🖱️  Clicking Create New Game button...');
-    await this.page.click('button:has-text("Create New Game")');
+    console.log('🖱️  Clicking Create Game button...');
+    await this.page.click('button:has-text("Create Game")');
     
     console.log('⏳ Waiting for game state to load...');
     // Wait for the new layout to appear (QR code or players box)
@@ -51,8 +51,15 @@ export class TestHost {
     console.log('⏳ Waiting for Start Game button...');
     await this.page.waitForSelector('button:has-text("Start Game")', { timeout: 5000 });
     
+    console.log('⏳ Waiting for Start Game button to be enabled...');
+    // Wait for the button to be enabled (not disabled)
+    await this.page.waitForSelector('button:has-text("Start Game"):not([disabled])', { timeout: 10000 });
+    
     console.log('🖱️  Clicking Start Game button...');
-    await this.page.click('button:has-text("Start Game")');
+    // Use locator directly to ensure proper scrolling and clicking
+    const startButton = this.page.locator('button:has-text("Start Game")');
+    await startButton.scrollIntoViewIfNeeded();
+    await startButton.click();
     
     console.log('⏳ Waiting for round to start...');
     // Wait for the game to transition from waiting to playing state
