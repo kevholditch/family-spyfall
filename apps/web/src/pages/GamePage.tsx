@@ -498,10 +498,10 @@ export function GamePage() {
               </h3>
               <div 
                 style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+                  display: 'flex',
+                  flexDirection: 'column',
                   gap: '1rem',
-                  maxWidth: '600px',
+                  maxWidth: '300px',
                   margin: '0 auto'
                 }}
               >
@@ -515,15 +515,18 @@ export function GamePage() {
                         padding: '1rem',
                         backgroundColor: isCurrentPlayer ? 'rgba(255, 215, 0, 0.3)' : 'rgba(255, 255, 255, 0.1)',
                         border: isCurrentPlayer ? '2px solid #ffd700' : '1px solid rgba(255, 140, 66, 0.3)',
-                        borderRadius: '8px'
+                        borderRadius: '8px',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        width: '100%'
                       }}
                     >
                       <div 
                         style={{
                           fontSize: 'clamp(1rem, 2vw, 1.2rem)',
                           fontWeight: isCurrentPlayer ? 'bold' : 'normal',
-                          color: '#f5f5dc',
-                          marginBottom: '0.5rem'
+                          color: '#f5f5dc'
                         }}
                       >
                         {player.name}
