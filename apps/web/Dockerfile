@@ -17,41 +17,47 @@ RUN pnpm install --frozen-lockfile
 # Copy source code
 COPY . .
 
-# Build the application
-RUN pnpm build --filter=@family-spyfall/web
+# Set production environment and build with minification
+ENV NODE_ENV=production
+RUN pnpm --filter=@family-spyfall/web build
 
 # Production stage
 FROM nginx:alpine AS production
 
+# Install envsubst for environment variable substitution and su-exec for user switching
+RUN apk add --no-cache gettext su-exec
+
+# Set environment defaults
+ENV NGINX_PORT=80
+ENV APP_DOMAIN=localhost
+ENV API_HOST=localhost
+ENV API_PORT=4000
+
 # Copy built application
 COPY --from=build /app/apps/web/dist /usr/share/nginx/html
 
-# Copy custom nginx configuration
-COPY apps/web/nginx.conf /etc/nginx/conf.d/default.conf
+# Copy nginx configuration template and startup script
+COPY apps/web/nginx.conf.template /etc/nginx/templates/default.conf.template
+COPY apps/web/docker-entrypoint.sh /docker-entrypoint.sh
 
-# Create non-root user
-RUN addgroup -g 1001 -S nginx
-RUN adduser -S nginx -u 1001 -G nginx
+# Set proper permissions for entrypoint script and nginx files
+RUN chmod +x /docker-entrypoint.sh && \
+    chown -R nginx:nginx /usr/share/nginx/html && \
+    chown -R nginx:nginx /var/cache/nginx && \
+    chown -R nginx:nginx /var/log/nginx && \
+    chown -R nginx:nginx /etc/nginx && \
+    mkdir -p /var/run && \
+    chown -R nginx:nginx /var/run && \
+    chmod -R 755 /var/log/nginx && \
+    chmod -R 755 /var/cache/nginx
 
-# Set proper permissions
-RUN chown -R nginx:nginx /usr/share/nginx/html
-RUN chown -R nginx:nginx /var/cache/nginx
-RUN chown -R nginx:nginx /var/log/nginx
-RUN chown -R nginx:nginx /etc/nginx/conf.d
-
-# Make nginx run as non-root
-RUN touch /var/run/nginx.pid
-RUN chown -R nginx:nginx /var/run/nginx.pid
-
-# Switch to non-root user
-USER nginx
-
-# Expose port
+# Expose configurable port (default 80)
 EXPOSE 80
 
-# Health check
+# Health check (run as root since we need to test the port)
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost/ || exit 1
+  CMD wget --no-verbose --tries=1 --spider http://localhost:80/health || exit 1
 
-# Start nginx
+# Use custom entrypoint (it will handle the user switching)
+ENTRYPOINT ["/docker-entrypoint.sh"]
 CMD ["nginx", "-g", "daemon off;"]

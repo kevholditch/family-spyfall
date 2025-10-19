@@ -8,50 +8,58 @@ RUN npm install -g pnpm
 WORKDIR /app
 
 # Copy package files
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* ./
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY apps/server/package.json ./apps/server/
 
-# Install dependencies
+# Install all dependencies for build
+ENV CI=true
 RUN pnpm install --frozen-lockfile
 
 # Build stage
 FROM base AS build
 COPY . .
-RUN pnpm build --filter=@family-spyfall/server
+RUN pnpm --filter=@family-spyfall/server build
 
-# Production stage
-FROM node:18-alpine AS production
-
-# Install pnpm
-RUN npm install -g pnpm
-
-# Create non-root user
-RUN addgroup -g 1001 -S nodejs
-RUN adduser -S nodejs -u 1001
-
-# Set working directory
-WORKDIR /app
-
-# Copy package files
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* ./
-COPY apps/server/package.json ./apps/server/
-
-# Install only production dependencies
+# Production dependencies stage
+FROM base AS prod-deps
+ENV CI=true
+COPY . .
 RUN pnpm install --frozen-lockfile --prod --filter=@family-spyfall/server
 
-# Copy built application
-COPY --from=build --chown=nodejs:nodejs /app/apps/server/dist ./apps/server/dist
-COPY --from=build --chown=nodejs:nodejs /app/apps/server/src ./apps/server/src
+# Production stage - use the prod-deps environment but with minimal additional changes
+FROM prod-deps AS production
+
+# Install dumb-init for proper signal handling and curl for health checks
+RUN apk add --no-cache dumb-init curl
+
+# Copy the built application from build stage
+COPY --from=build /app/apps/server/dist ./apps/server/dist
+
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001
+
+# Set proper ownership before switching user
+RUN chown -R nodejs:nodejs /app
+
+# Set environment defaults
+ENV SERVER_PORT=4000
+ENV HOST=0.0.0.0
+ENV NODE_ENV=production
 
 # Switch to non-root user
 USER nodejs
 
-# Expose port
+# Change working directory to server app for better module resolution
+WORKDIR /app/apps/server
+
+# Expose configurable port (note: EXPOSE doesn't support variables, so we expose 4000 as default)
 EXPOSE 4000
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:4000/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
+  CMD curl -f http://localhost:4000/health || exit 1
 
-# Start the application
-CMD ["node", "apps/server/dist/index.js"]
+# Start the application with dumb-init from the server directory
+ENTRYPOINT ["dumb-init", "--"]
+CMD ["node", "dist/index.js"]

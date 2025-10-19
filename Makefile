@@ -1,4 +1,4 @@
-.PHONY: test-server test-web test-web-chrome test install-browsers local-deploy local-stop
+.PHONY: test-server test-web test-web-chrome test install-browsers local-deploy local-stop docker-build-api docker-build-web
 
 # Install Playwright browsers with dependencies
 install-browsers:
@@ -24,7 +24,7 @@ test-web-chrome:
 test: test-server test-web
 	@echo "All tests completed!"
 
-# Local deployment - sets up Nginx Proxy Manager and starts services
+# Local deployment - sets up Docker containers and Nginx Proxy Manager
 # Usage: make local-deploy DOMAIN=your-domain.com
 local-deploy:
 	@if [ -z "$(DOMAIN)" ]; then \
@@ -32,10 +32,35 @@ local-deploy:
 		exit 1; \
 	fi
 	@echo "🏠 Setting up local deployment for domain: $(DOMAIN)"
-	@echo "📋 Creating Nginx Proxy Manager configuration..."
+	@echo "📋 Building Docker containers..."
+	@make docker-build-api docker-build-web
+	@echo "📋 Creating Docker Compose configuration..."
 	@mkdir -p local-setup/data local-setup/letsencrypt
-	@echo "version: '3.8'" > local-setup/docker-compose.yml
-	@echo "services:" >> local-setup/docker-compose.yml
+	@echo "services:" > local-setup/docker-compose.yml
+	@echo "  spyfall-api:" >> local-setup/docker-compose.yml
+	@echo "    image: spyfall-api:latest" >> local-setup/docker-compose.yml
+	@echo "    container_name: spyfall-api" >> local-setup/docker-compose.yml
+	@echo "    environment:" >> local-setup/docker-compose.yml
+	@echo "      - SERVER_PORT=4000" >> local-setup/docker-compose.yml
+	@echo "      - HOST=0.0.0.0" >> local-setup/docker-compose.yml
+	@echo "      - ALLOWED_ORIGIN=https://web.$(DOMAIN)" >> local-setup/docker-compose.yml
+	@echo "      - WEB_ORIGIN=https://web.$(DOMAIN)" >> local-setup/docker-compose.yml
+	@echo "    networks:" >> local-setup/docker-compose.yml
+	@echo "      - spyfall-network" >> local-setup/docker-compose.yml
+	@echo "    restart: unless-stopped" >> local-setup/docker-compose.yml
+	@echo "" >> local-setup/docker-compose.yml
+	@echo "  spyfall-web:" >> local-setup/docker-compose.yml
+	@echo "    image: spyfall-web:latest" >> local-setup/docker-compose.yml
+	@echo "    container_name: spyfall-web" >> local-setup/docker-compose.yml
+	@echo "    environment:" >> local-setup/docker-compose.yml
+	@echo "      - NGINX_PORT=80" >> local-setup/docker-compose.yml
+	@echo "      - APP_DOMAIN=web.$(DOMAIN)" >> local-setup/docker-compose.yml
+	@echo "      - API_HOST=api.$(DOMAIN)" >> local-setup/docker-compose.yml
+	@echo "      - API_PORT=4000" >> local-setup/docker-compose.yml
+	@echo "    networks:" >> local-setup/docker-compose.yml
+	@echo "      - spyfall-network" >> local-setup/docker-compose.yml
+	@echo "    restart: unless-stopped" >> local-setup/docker-compose.yml
+	@echo "" >> local-setup/docker-compose.yml
 	@echo "  nginx-proxy-manager:" >> local-setup/docker-compose.yml
 	@echo "    image: jc21/nginx-proxy-manager:latest" >> local-setup/docker-compose.yml
 	@echo "    container_name: spyfall-npm" >> local-setup/docker-compose.yml
@@ -53,43 +78,81 @@ local-deploy:
 	@echo "networks:" >> local-setup/docker-compose.yml
 	@echo "  spyfall-network:" >> local-setup/docker-compose.yml
 	@echo "    driver: bridge" >> local-setup/docker-compose.yml
-	@echo "🚀 Starting Nginx Proxy Manager..."
+	@echo "🚀 Starting all services..."
 	@cd local-setup && docker-compose up -d
-	@echo "⏳ Waiting for Nginx Proxy Manager to start..."
-	@sleep 10
-	@echo "🌐 Nginx Proxy Manager is running!"
+	@echo "⏳ Waiting for services to start..."
+	@sleep 15
+	@echo "🌐 All services are running!"
 	@echo ""
 	@echo "📝 Next steps:"
 	@echo "1. Open http://localhost:81 in your browser"
 	@echo "2. Login with: admin@example.com / changeme"
 	@echo "3. Create proxy hosts:"
-	@echo "   - web.$(DOMAIN) → http://host.docker.internal:5173"
-	@echo "   - api.$(DOMAIN) → http://host.docker.internal:5000"
+	@echo "   - web.$(DOMAIN) → http://spyfall-web:80"
+	@echo "   - api.$(DOMAIN) → http://spyfall-api:4000"
 	@echo "4. Generate SSL certificates for both hosts"
-	@echo "5. Run: make local-start-services"
 	@echo ""
 	@echo "🎮 Your game will be available at:"
 	@echo "   https://web.$(DOMAIN)"
 	@echo "   https://api.$(DOMAIN)"
 
-# Start the Spyfall services locally
+# Start the Spyfall services locally (now using Docker Compose)
 local-start-services:
-	@echo "🎮 Starting Spyfall services..."
-	@echo "📡 Starting API server on port 5000..."
-	@pnpm -C apps/server start &
-	@echo "🌐 Starting web server on port 5173..."
-	@pnpm -C apps/web dev &
-	@echo ""
-	@echo "✅ Services started! Check:"
-	@echo "   - API: http://localhost:5000"
-	@echo "   - Web: http://localhost:5173"
-	@echo "   - NPM Admin: http://localhost:81"
+	@echo "🎮 Starting Spyfall services via Docker Compose..."
+	@cd local-setup && docker-compose up -d
+	@echo "✅ Services started! Check status with: docker-compose ps"
 
 # Stop local deployment
 local-stop:
 	@echo "🛑 Stopping local deployment..."
 	@cd local-setup && docker-compose down
-	@pkill -f "pnpm.*apps/server" || true
-	@pkill -f "pnpm.*apps/web" || true
 	@echo "✅ Local deployment stopped!"
+
+# Build API server Docker container
+# Usage: make docker-build-api
+docker-build-api:
+	@echo "🐳 Building API server Docker container..."
+	@echo "Building production-ready container..."
+	docker build \
+		--build-arg BUILD_ENV=production \
+		-f apps/server/Dockerfile \
+		-t spyfall-api:latest \
+		--target production \
+		.
+	@echo "✅ API server container built successfully!"
+	@echo "🚀 To run the container with your domain:"
+	@echo "   docker run -d \\"
+	@echo "     --name spyfall-api \\"
+	@echo "     -p 4000:4000 \\"
+	@echo "     -e SERVER_PORT=4000 \\"
+	@echo "     -e HOST=0.0.0.0 \\"
+	@echo "     -e ALLOWED_ORIGIN=https://yourdomain.com \\"
+	@echo "     -e WEB_ORIGIN=https://yourdomain.com \\"
+	@echo "     spyfall-api:latest"
+	@echo ""
+	@echo "💡 Replace 'yourdomain.com' with your actual domain name when running the container."
+
+# Build Web app Docker container
+# Usage: make docker-build-web
+docker-build-web:
+	@echo "🐳 Building Web app Docker container..."
+	@echo "Building production-ready container with minified assets..."
+	docker build \
+		--build-arg BUILD_ENV=production \
+		-f apps/web/Dockerfile \
+		-t spyfall-web:latest \
+		--target production \
+		.
+	@echo "✅ Web app container built successfully!"
+	@echo "🚀 To run the container with your configuration:"
+	@echo "   docker run -d \\"
+	@echo "     --name spyfall-web \\"
+	@echo "     -p 80:80 \\"
+	@echo "     -e NGINX_PORT=80 \\"
+	@echo "     -e APP_DOMAIN=yourdomain.com \\"
+	@echo "     -e API_HOST=api.yourdomain.com \\"
+	@echo "     -e API_PORT=4000 \\"
+	@echo "     spyfall-web:latest"
+	@echo ""
+	@echo "💡 Replace 'yourdomain.com' and 'api.yourdomain.com' with your actual domain names when running the container."
 
