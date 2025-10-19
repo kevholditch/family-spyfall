@@ -1,5 +1,5 @@
-# Build stage
-FROM node:18-alpine AS build
+# Base stage - install dependencies
+FROM node:18-alpine AS base
 
 # Install pnpm
 RUN npm install -g pnpm
@@ -12,13 +12,21 @@ COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* ./
 COPY apps/web/package.json ./apps/web/
 
 # Install dependencies
+ENV CI=true
 RUN pnpm install --frozen-lockfile
+
+# Build stage
+FROM base AS build
 
 # Copy source code
 COPY . .
 
+# Ensure workspace dependencies are properly linked
+RUN pnpm install --frozen-lockfile
+
 # Set production environment and build with minification
 ENV NODE_ENV=production
+WORKDIR /app
 RUN pnpm --filter=@family-spyfall/web build
 
 # Production stage
