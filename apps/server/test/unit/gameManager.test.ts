@@ -34,7 +34,7 @@ describe('GameManager', () => {
       expect(result?.playerId).toBeTruthy();
       expect(result?.secret).toBeTruthy();
       
-      let game = gameManager.getGame(gameId);
+      const game = gameManager.getGame(gameId);
       expect(game?.players).toHaveLength(1);
       expect(game?.players[0].name).toBe('Alice');
       expect(game?.players[0].isHost).toBe(true); // First player becomes host
@@ -91,7 +91,7 @@ describe('GameManager', () => {
       gameManager.addPlayer(gameId, 'Bob');
       
       gameManager.startRound(gameId);
-      let game = gameManager.getGame(gameId);
+      const game = gameManager.getGame(gameId);
       
       expect(game?.status).toBe('informing_players');
     });
@@ -102,7 +102,7 @@ describe('GameManager', () => {
       gameManager.addPlayer(gameId, 'Bob');
       
       gameManager.startRound(gameId);
-      let game = gameManager.getGame(gameId);
+      const game = gameManager.getGame(gameId);
       
       game?.players.forEach(player => {
         expect(player.hasAcknowledgedRole).toBe(false);
@@ -120,7 +120,7 @@ describe('GameManager', () => {
       const result = gameManager.startRound(gameId);
       expect(result).toBe(true);
       
-      let game = gameManager.getGame(gameId);
+      const game = gameManager.getGame(gameId);
       const spies = game?.players.filter(p => p.role === 'spy');
       expect(spies).toHaveLength(1);
     });
@@ -134,7 +134,7 @@ describe('GameManager', () => {
       }
       
       gameManager.startRound(gameId);
-      let game = gameManager.getGame(gameId);
+      const game = gameManager.getGame(gameId);
       
       const civilians = game?.players.filter(p => p.role === 'civilian');
       civilians?.forEach(civilian => {
@@ -151,7 +151,7 @@ describe('GameManager', () => {
       }
       
       gameManager.startRound(gameId);
-      let game = gameManager.getGame(gameId);
+      const game = gameManager.getGame(gameId);
       
       const spy = game?.players.find(p => p.role === 'spy');
       expect(spy?.location).toBeUndefined();
@@ -165,7 +165,7 @@ describe('GameManager', () => {
       gameManager.addPlayer(gameId, 'Bob');
       
       gameManager.startRound(gameId);
-      let game = gameManager.getGame(gameId);
+      const game = gameManager.getGame(gameId);
       
       expect(game?.players[0].hasAcknowledgedRole).toBe(false);
       
@@ -183,7 +183,7 @@ describe('GameManager', () => {
       const charlie = gameManager.addPlayer(gameId, 'Charlie');
       
       gameManager.startRound(gameId);
-      let game = gameManager.getGame(gameId);
+      const game = gameManager.getGame(gameId);
       
       expect(game?.status).toBe('informing_players');
       
@@ -240,7 +240,7 @@ describe('GameManager', () => {
       if (bob) gameManager.acknowledgeRoleInfo(gameId, bob.playerId);
       if (charlie) gameManager.acknowledgeRoleInfo(gameId, charlie.playerId);
       
-      let game = gameManager.getGame(gameId);
+      const game = gameManager.getGame(gameId);
       // Starting player is now randomized, so we can't assume it's 0
       const startingPlayerIndex = game?.currentPlayerIndex || 0;
       expect(startingPlayerIndex).toBeGreaterThanOrEqual(0);
@@ -325,7 +325,7 @@ describe('GameManager', () => {
       if (bob) gameManager.acknowledgeRoleInfo(gameId, bob.playerId);
       if (charlie) gameManager.acknowledgeRoleInfo(gameId, charlie.playerId);
       
-      let game = gameManager.getGame(gameId);
+      const game = gameManager.getGame(gameId);
       const startingPlayerIndex = game?.currentPlayerIndex || 0;
       expect(startingPlayerIndex).toBeGreaterThanOrEqual(0);
       expect(startingPlayerIndex).toBeLessThan(game?.players.length || 1);
@@ -362,7 +362,7 @@ describe('GameManager', () => {
       if (bob) gameManager.acknowledgeRoleInfo(gameId, bob.playerId);
       if (charlie) gameManager.acknowledgeRoleInfo(gameId, charlie.playerId);
       
-      let game = gameManager.getGame(gameId);
+      const game = gameManager.getGame(gameId);
       const startingPlayerIndex = game?.currentPlayerIndex || 0;
       expect(startingPlayerIndex).toBeGreaterThanOrEqual(0);
       expect(startingPlayerIndex).toBeLessThan(game?.players.length || 1);
@@ -394,7 +394,7 @@ describe('GameManager', () => {
       if (alice) gameManager.acknowledgeRoleInfo(gameId, alice.playerId);
       if (bob) gameManager.acknowledgeRoleInfo(gameId, bob.playerId);
       
-      let game = gameManager.getGame(gameId);
+      const game = gameManager.getGame(gameId);
       const startingPlayerIndex = game?.currentPlayerIndex || 0;
       expect(startingPlayerIndex).toBeGreaterThanOrEqual(0);
       expect(startingPlayerIndex).toBeLessThan(game?.players.length || 1);
@@ -420,7 +420,7 @@ describe('GameManager', () => {
       if (bob) gameManager.acknowledgeRoleInfo(gameId, bob.playerId);
       if (charlie) gameManager.acknowledgeRoleInfo(gameId, charlie.playerId);
       
-      let game = gameManager.getGame(gameId);
+      const game = gameManager.getGame(gameId);
       
       // Advance through all turns to reach accusing mode
       let currentIndex = game?.currentPlayerIndex || 0;
@@ -457,7 +457,7 @@ describe('GameManager', () => {
       if (bob) gameManager.acknowledgeRoleInfo(gameId, bob.playerId);
       if (charlie) gameManager.acknowledgeRoleInfo(gameId, charlie.playerId);
       
-      let game = gameManager.getGame(gameId);
+      const game = gameManager.getGame(gameId);
       
 
       for (let i = 0; i < 3; i++) {
@@ -559,7 +559,7 @@ describe('GameManager', () => {
           const startResult = gameManager.startRound(gameId);
           expect(startResult).toBe(true);
           
-          let game = gameManager.getGame(gameId);
+          const game = gameManager.getGame(gameId);
           expect(game).toBeTruthy();
           expect(game?.players).toHaveLength(playerCount);
           expect(game?.status).toBe('informing_players');
@@ -606,7 +606,7 @@ describe('GameManager', () => {
           
           // Advance turns - note that after all players have asked questions, 
           // the game transitions to 'accusing' mode, so we can only go through one full round
-          let game = gameManager.getGame(gameId);
+          const game = gameManager.getGame(gameId);
           let currentIndex = game?.currentPlayerIndex || 0;
           
           // Advance through all players in the expected order

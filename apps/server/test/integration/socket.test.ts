@@ -304,14 +304,14 @@ declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace jest {
     interface Matchers<R> {
-      toBeOneOf(expected: any[]): R;
+      toBeOneOf(expected: unknown[]): R;
     }
   }
 }
 
 // Custom matcher implementation
 expect.extend({
-  toBeOneOf(received: any, expected: any[]) {
+  toBeOneOf(received: unknown, expected: unknown[]) {
     const pass = expected.includes(received);
     if (pass) {
       return {

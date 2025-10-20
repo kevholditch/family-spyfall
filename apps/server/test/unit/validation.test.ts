@@ -35,15 +35,15 @@ describe('Validation', () => {
     });
 
     it('should handle edge cases', () => {
-      expect(validatePlayerName(null as any)).toEqual({ 
+      expect(validatePlayerName(null as unknown as string)).toEqual({ 
         isValid: false, 
         error: 'Player name is required' 
       });
-      expect(validatePlayerName(undefined as any)).toEqual({ 
+      expect(validatePlayerName(undefined as unknown as string)).toEqual({ 
         isValid: false, 
         error: 'Player name is required' 
       });
-      expect(validatePlayerName(123 as any)).toEqual({ 
+      expect(validatePlayerName(123 as unknown as string)).toEqual({ 
         isValid: false, 
         error: 'Player name is required' 
       });

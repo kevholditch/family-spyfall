@@ -53,9 +53,74 @@ export interface JoinResponse {
   error?: string;
 }
 
+// Game update data types
+type PlayerJoinedData = {
+  id: string;
+  name: string;
+  secret: string;
+  isHost: boolean;
+  isConnected: boolean;
+};
+
+type PlayerLeftData = {
+  playerId: string;
+  playerName: string;
+};
+
+type RoundStartedData = {
+  roundNumber: number;
+  currentPlayerIndex: number;
+};
+
+type InformingPlayersData = {
+  roundNumber: number;
+};
+
+type PlayerAcknowledgedData = {
+  playerId: string;
+};
+
+type TurnAdvancedData = {
+  currentPlayerIndex: number;
+};
+
+type AccuseModeStartedData = Record<string, never>;
+
+type VoteCastData = {
+  voterId: string;
+};
+
+type SpyGuessSubmittedData = Record<string, never>;
+
+type RoundSummaryData = {
+  roundResult?: RoundResult;
+  players: Array<{ id: string; name: string; score: number; role?: 'spy' | 'civilian' }>;
+};
+
+type RoundEndedData = Record<string, never>;
+
+type GameFinishedData = Record<string, never>;
+
+type ScoresUpdatedData = Record<string, never>;
+
+type GameUpdateData = 
+  | PlayerJoinedData
+  | PlayerLeftData
+  | RoundStartedData
+  | InformingPlayersData
+  | PlayerAcknowledgedData
+  | TurnAdvancedData
+  | AccuseModeStartedData
+  | VoteCastData
+  | SpyGuessSubmittedData
+  | RoundSummaryData
+  | RoundEndedData
+  | GameFinishedData
+  | ScoresUpdatedData;
+
 export interface GameUpdate {
   type: 'player_joined' | 'player_left' | 'round_started' | 'informing_players' | 'player_acknowledged' | 'turn_advanced' | 'accuse_mode_started' | 'vote_cast' | 'spy_guess_submitted' | 'round_summary' | 'round_ended' | 'game_finished' | 'scores_updated';
-  data: any;
+  data: GameUpdateData;
 }
 
 export interface SocketEvents {
