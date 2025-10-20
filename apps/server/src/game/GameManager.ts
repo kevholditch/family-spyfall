@@ -187,6 +187,8 @@ export class GameManager {
     return true;
   }
 
+  
+
   submitSpyGuess(gameId: string, playerId: string, locationGuess: string): boolean {
     const game = this.games.get(gameId);
     if (!game || game.status !== 'accusing' || !game.accuseMode) return false;
@@ -291,10 +293,11 @@ export class GameManager {
       game.currentPlayerIndex = Math.floor(Math.random() * game.players.length);
       game.accuseMode = undefined;
       game.roundResult = undefined;
-      game.players.forEach(p => {
-        p.hasAskedQuestion = false;
-        // Keep hasAcknowledgedRole as true - players already saw their roles
-      });
+      // Reset hasAskedQuestion for all players
+      for (let i = 0; i < game.players.length; i++) {
+        game.players[i].hasAskedQuestion = false;
+      }
+      // Keep hasAcknowledgedRole as true - players already saw their roles
     } else {
       // Show round summary with computed display data
       game.status = 'round_summary';
