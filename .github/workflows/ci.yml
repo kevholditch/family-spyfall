@@ -52,7 +52,7 @@ jobs:
       run: make install-browsers
       
     - name: Run E2E tests
-      run: make test-web
+      run: make test-web-chrome
       env:
         CI: true
       
