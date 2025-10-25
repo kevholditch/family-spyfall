@@ -340,10 +340,13 @@ test.describe('Spyfall Winning Scenarios', () => {
       await playerB.acknowledgeRole();
       await playerC.acknowledgeRole();
 
+      // Wait for question round to start
+      await playerA.waitForQuestionRound();
+      await playerB.waitForQuestionRound();
+      await playerC.waitForQuestionRound();
+
       // Play round - spy wins
-      await players[0].player.clickNext();
-      await players[1].player.clickNext();
-      await players[2].player.clickNext();
+      await TestPlayer.advanceAllPlayersInTurnOrder(players.map(p => p.player));
 
       await playerA.waitForAccusationPhase();
       await spy.player.guessLocation(location);
@@ -368,6 +371,11 @@ test.describe('Spyfall Winning Scenarios', () => {
       await playerA.acknowledgeRole();
       await playerB.acknowledgeRole();
       await playerC.acknowledgeRole();
+
+      // Wait for question round to start
+      await playerA.waitForQuestionRound();
+      await playerB.waitForQuestionRound();
+      await playerC.waitForQuestionRound();
 
       const newPlayers = [
         { player: playerA, name: 'player a', ...newPlayerARoleInfo },

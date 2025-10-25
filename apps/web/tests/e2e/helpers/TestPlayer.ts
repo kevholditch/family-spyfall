@@ -205,11 +205,14 @@ export class TestPlayer {
     while (playersCompleted < totalPlayers) {
       let anyPlayerAdvanced = false;
       
+      // Try each player to see if it's their turn
       for (const player of players) {
         const didAdvance = await player.clickNextIfMyTurn();
         if (didAdvance) {
           playersCompleted++;
           anyPlayerAdvanced = true;
+          // Wait a bit for the turn to advance to the next player
+          await player.page.waitForTimeout(200);
           break; // Move to next iteration to let the next player's turn start
         }
       }
