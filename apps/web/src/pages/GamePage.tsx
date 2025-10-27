@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useSocket } from '../hooks/useSocket';
 import { useGameState } from '../hooks/useGameState';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { debugLog, debugError } from '../utils/debug';
-import { SPYFALL_LOCATIONS } from '../types';
+import { SPYFALL_LOCATIONS, RoleAssignment } from '../types';
 import { getApiUrl } from '../utils/api';
 
 export function GamePage() {
@@ -16,6 +16,7 @@ export function GamePage() {
   const [hasRejoined, setHasRejoined] = useState(false);
   const [countdown, setCountdown] = useState(60);
   const [hasAcknowledged, setHasAcknowledged] = useState(false);
+  const [isRoleVisible, setIsRoleVisible] = useState(false);
 
   // Handle game updates
   useEffect(() => {
@@ -29,6 +30,13 @@ export function GamePage() {
       }
     }
   }, [gameUpdate, updateGameState]);
+
+  // Reset role visibility when game phase changes
+  useEffect(() => {
+    if (gameState?.status === 'playing') {
+      setIsRoleVisible(false);
+    }
+  }, [gameState?.status]);
 
   // Handle role assignments
   useEffect(() => {
@@ -178,6 +186,57 @@ export function GamePage() {
     emit('submit_player_vote', { accusedPlayerId });
   };
 
+  const handleToggleRoleVisibility = () => {
+    setIsRoleVisible(!isRoleVisible);
+  };
+
+  // Reusable function to render role display (spy or location image)
+  const renderRoleDisplay = (roleAssignment: RoleAssignment) => {
+    if (!roleAssignment) return null;
+
+    const { role, location } = roleAssignment;
+
+    return (
+      <div>
+        {role === 'spy' ? (
+          <div>
+            <img 
+              src="/assets/spy.png" 
+              alt="Spy"
+              style={{
+                maxWidth: '100%',
+                maxHeight: '60vh',
+                width: 'auto',
+                height: 'auto',
+                objectFit: 'contain',
+                marginBottom: '3rem',
+                borderRadius: '12px',
+                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)'
+              }}
+            />
+          </div>
+        ) : (
+          <div>
+            <img 
+              src={`/${SPYFALL_LOCATIONS.find(loc => loc.name === location)?.image || 'assets/default.png'}`}
+              alt={location}
+              style={{
+                maxWidth: '100%',
+                maxHeight: '60vh',
+                width: 'auto',
+                height: 'auto',
+                objectFit: 'contain',
+                marginBottom: '3rem',
+                borderRadius: '12px',
+                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)'
+              }}
+            />
+          </div>
+        )}
+      </div>
+    );
+  };
+
   // Game is active - show role-specific content
   return (
     <div 
@@ -209,41 +268,7 @@ export function GamePage() {
             {!hasAcknowledged ? (
               // Show role info with acknowledge button
               <div>
-                {roleAssignment.role === 'spy' ? (
-                  <div>
-                    <img 
-                      src="/assets/spy.png" 
-                      alt="Spy"
-                      style={{
-                        maxWidth: '100%',
-                        maxHeight: '60vh',
-                        width: 'auto',
-                        height: 'auto',
-                        objectFit: 'contain',
-                        marginBottom: '3rem',
-                        borderRadius: '12px',
-                        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)'
-                      }}
-                    />
-                  </div>
-                ) : (
-                  <div>
-                    <img 
-                      src={`/${SPYFALL_LOCATIONS.find(loc => loc.name === roleAssignment.location)?.image || 'assets/default.png'}`}
-                      alt={roleAssignment.location}
-                      style={{
-                        maxWidth: '100%',
-                        maxHeight: '60vh',
-                        width: 'auto',
-                        height: 'auto',
-                        objectFit: 'contain',
-                        marginBottom: '3rem',
-                        borderRadius: '12px',
-                        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)'
-                      }}
-                    />
-                  </div>
-                )}
+                {renderRoleDisplay(roleAssignment)}
                 <button
                   onClick={handleAcknowledgeRole}
                   style={{
@@ -374,6 +399,95 @@ export function GamePage() {
                 </p>
               )}
             </div>
+
+            {/* View/Hide Role Button */}
+            <div style={{ marginBottom: '2rem' }}>
+              <button
+                onClick={handleToggleRoleVisibility}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  padding: '0.75rem 1.5rem',
+                  fontSize: 'clamp(1rem, 2vw, 1.2rem)',
+                  fontWeight: 'bold',
+                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                  color: '#f5f5dc',
+                  border: '1px solid rgba(255, 140, 66, 0.3)',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  transition: 'background-color 0.2s',
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'}
+                onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'}
+              >
+                {isRoleVisible ? (
+                  <>
+                    <EyeOff style={{ width: '1.25rem', height: '1.25rem', marginRight: '0.5rem' }} />
+                    Hide Role
+                  </>
+                ) : (
+                  <>
+                    <Eye style={{ width: '1.25rem', height: '1.25rem', marginRight: '0.5rem' }} />
+                    View Role
+                  </>
+                )}
+              </button>
+            </div>
+
+            {/* Role Display Overlay */}
+            {isRoleVisible && (
+              <div 
+                style={{
+                  position: 'fixed',
+                  top: 0,
+                  left: 0,
+                  width: '100vw',
+                  height: '100vh',
+                  backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  zIndex: 1000
+                }}
+                onClick={handleToggleRoleVisibility}
+              >
+                <div 
+                  style={{
+                    backgroundColor: '#1e3a5f',
+                    borderRadius: '12px',
+                    padding: '2rem',
+                    maxWidth: '90vw',
+                    maxHeight: '90vh',
+                    textAlign: 'center',
+                    position: 'relative'
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <button
+                    onClick={handleToggleRoleVisibility}
+                    style={{
+                      position: 'absolute',
+                      top: '1rem',
+                      right: '1rem',
+                      background: 'rgba(255, 255, 255, 0.1)',
+                      border: 'none',
+                      borderRadius: '50%',
+                      width: '2rem',
+                      height: '2rem',
+                      color: '#f5f5dc',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    ×
+                  </button>
+                  {renderRoleDisplay(roleAssignment)}
+                </div>
+              </div>
+            )}
           </div>
         )}
 

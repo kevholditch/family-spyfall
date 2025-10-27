@@ -148,6 +148,59 @@ export class TestPlayer {
     return 0;
   }
 
+  async clickViewRole(): Promise<void> {
+    const viewRoleButton = this.page.locator('button:has-text("View Role")');
+    await viewRoleButton.waitFor({ state: 'visible', timeout: 5000 });
+    await viewRoleButton.click();
+    console.log(`✅ [${this.name}] clicked View Role`);
+  }
+
+  async clickHideRole(): Promise<void> {
+    const hideRoleButton = this.page.locator('button:has-text("Hide Role")');
+    await hideRoleButton.waitFor({ state: 'visible', timeout: 5000 });
+    await hideRoleButton.click();
+    console.log(`✅ [${this.name}] clicked Hide Role`);
+  }
+
+  async isRoleVisible(): Promise<boolean> {
+    // Check if role image is visible in the overlay
+    const spyImage = this.page.locator('img[src="/assets/spy.png"]');
+    const locationImage = this.page.locator('img[src^="/assets/"][src$=".png"]:not([src="/assets/spy.png"])');
+    
+    const spyVisible = await spyImage.isVisible();
+    const locationVisible = await locationImage.isVisible();
+    
+    return spyVisible || locationVisible;
+  }
+
+  async verifyRoleNotVisible(): Promise<void> {
+    const spyImage = this.page.locator('img[src="/assets/spy.png"]');
+    const locationImage = this.page.locator('img[src^="/assets/"][src$=".png"]:not([src="/assets/spy.png"])');
+    
+    const spyVisible = await spyImage.isVisible();
+    const locationVisible = await locationImage.isVisible();
+    
+    if (spyVisible || locationVisible) {
+      throw new Error(`Role should not be visible for ${this.name}, but it is`);
+    }
+    
+    console.log(`✅ [${this.name}] verified role is not visible`);
+  }
+
+  async verifyRoleVisible(): Promise<void> {
+    const spyImage = this.page.locator('img[src="/assets/spy.png"]');
+    const locationImage = this.page.locator('img[src^="/assets/"][src$=".png"]:not([src="/assets/spy.png"])');
+    
+    const spyVisible = await spyImage.isVisible();
+    const locationVisible = await locationImage.isVisible();
+    
+    if (!spyVisible && !locationVisible) {
+      throw new Error(`Role should be visible for ${this.name}, but it is not`);
+    }
+    
+    console.log(`✅ [${this.name}] verified role is visible`);
+  }
+
   async getRoundPoints(): Promise<number> {
     return this.getScore();
   }
